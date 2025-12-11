@@ -24,8 +24,25 @@ echo -e "${BOLD}${BLUE}╚══════════════════
 echo ""
 
 # Parse command line arguments
-API_URL="https://yourdomain.com/api"
-API_KEY="8287a1ff7bb18c13e28842054001a95b8b3481c2507dc1510a2184009e1103bb"
+# Default values (can be overridden by arguments or environment variables)
+API_URL="${BASE_URL:-https://yourdomain.com/api}"
+API_KEY="${API_KEY:-}"
+
+# Handle arguments
+if [ -n "$1" ] && [ -n "$2" ]; then
+    # Both arguments provided: URL and API_KEY
+    API_URL="$1"
+    API_KEY="$2"
+elif [ -n "$1" ]; then
+    # Only one argument provided
+    if [[ "$1" =~ ^https?:// ]]; then
+        # It's a URL
+        API_URL="$1"
+    else
+        # It's an API key
+        API_KEY="$1"
+    fi
+fi
 
 # Check if API key is provided
 if [ -z "$API_KEY" ]; then
@@ -37,29 +54,12 @@ if [ -z "$API_KEY" ]; then
     echo "  $0 https://yourdomain.com/api YOUR_API_KEY"
     echo "  $0 YOUR_API_KEY  # Uses default URL"
     echo ""
-    echo "Or set environment variable:"
+    echo "Or set environment variables:"
+    echo "  export BASE_URL=https://yourdomain.com/api"
     echo "  export API_KEY=YOUR_API_KEY"
     echo "  $0"
     echo ""
-    
-    # Check if API_KEY is in environment
-    if [ -n "$API_KEY" ]; then
-        echo -e "${GREEN}✓ Using API_KEY from environment${NC}"
-    else
-        exit 1
-    fi
-fi
-
-# If only one argument provided, assume it's the API key
-if [ -n "$1" ] && [ -z "$2" ]; then
-    # Check if first arg looks like a URL
-    if [[ "$1" =~ ^https?:// ]]; then
-        API_URL="$1"
-        API_KEY="${API_KEY}"
-    else
-        API_KEY="$1"
-        API_URL="https://yourdomain.com/api"
-    fi
+    exit 1
 fi
 
 echo -e "${BLUE}Configuration:${NC}"
