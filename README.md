@@ -404,6 +404,7 @@ A real-world application using SlimStorage's Event API to collect and display Ge
 - **Statistics** — Min/max ranges, averages, and daily exposure calculations
 
 [👉 View Live Statistics](https://storage.services.kibotu.net/geiger)
+
 [👉 View Radiation Monitor Blog Article](https://portfolio.kibotu.net/essays/2021/03/diy-geiger-counter/)
 
 ---
