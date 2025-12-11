@@ -48,21 +48,29 @@ const DOWNLOAD_TIMEOUT = 300; // 5 minutes
 // Detect update mode
 $isUpdateMode = isset($_GET['update']) && $_GET['update'] === '1';
 
-// Security: Prevent access after installation is complete (unless updating)
-if (file_exists(SECRETS_FILE) && !isset($_GET['force']) && !$isUpdateMode) {
+// Start session early (needed for installation flow tracking)
+session_start();
+
+// Check if we're in the middle of an active installation (config was just saved)
+$isActiveInstallation = isset($_SESSION['db_connection_ok']) || isset($_SESSION['config']);
+$currentStep = $_GET['step'] ?? 'welcome';
+
+// Security: Prevent access after installation is complete (unless updating or in active installation)
+// Allow database and complete steps if we're in an active installation session
+$allowedStepsWithSecrets = ['database', 'complete', 'delete'];
+$isAllowedStep = in_array($currentStep, $allowedStepsWithSecrets) && $isActiveInstallation;
+
+if (file_exists(SECRETS_FILE) && !isset($_GET['force']) && !$isUpdateMode && !$isAllowedStep) {
     die('⚠️ Installation already complete. Delete .secrets.yml or add ?force=1 to reinstall, or ?update=1 to update.');
 }
-
-// Start session for multi-step process
-session_start();
 
 // Store update mode in session
 if ($isUpdateMode) {
     $_SESSION['update_mode'] = true;
 }
 
-// Handle different installation steps
-$step = $_GET['step'] ?? 'welcome';
+// Handle different installation steps (use $currentStep from earlier)
+$step = $currentStep;
 
 // Early handler for database step - redirect to configure if not ready
 if ($step === 'database' && !isset($_SESSION['db_connection_ok'])) {
@@ -192,7 +200,7 @@ function ajaxDownloadRelease(array $releaseInfo): int
     // Fall back to zipball_url if no release asset found (full repo)
     $zipUrl = $releaseInfo['zipball_url'];
     $isReleaseAsset = false;
-    
+
     if (!empty($releaseInfo['assets'])) {
         foreach ($releaseInfo['assets'] as $asset) {
             // Match slimstore-*.zip but not the checksum file
@@ -203,40 +211,65 @@ function ajaxDownloadRelease(array $releaseInfo): int
             }
         }
     }
-    
+
     $_SESSION['is_release_asset'] = $isReleaseAsset;
+    $_SESSION['download_url'] = $zipUrl;
     $zipFile = TEMP_DIR . '/release.zip';
-    
+
     // Create temp directory
     if (!file_exists(TEMP_DIR)) {
         mkdir(TEMP_DIR, 0755, true);
     }
+
+    // Download with retry logic (GitHub sometimes returns 503)
+    $maxRetries = 3;
+    $retryDelay = 2; // seconds
+    $lastError = '';
+    $lastHttpCode = 0;
     
-    // Download with progress
-    $ch = curl_init($zipUrl);
-    $fp = fopen($zipFile, 'w+');
-    
-    curl_setopt($ch, CURLOPT_FILE, $fp);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'SlimStorage-Installer');
-    curl_setopt($ch, CURLOPT_TIMEOUT, DOWNLOAD_TIMEOUT);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-    
-    $result = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
-    if ($result === false) {
-        $error = curl_error($ch);
+    for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+        $ch = curl_init($zipUrl);
+        $fp = fopen($zipFile, 'w+');
+
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'SlimStorage-Installer/1.0');
+        curl_setopt($ch, CURLOPT_TIMEOUT, DOWNLOAD_TIMEOUT);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+
+        $result = curl_exec($ch);
+        $lastHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($result === false) {
+            $lastError = curl_error($ch);
+            curl_close($ch);
+            fclose($fp);
+            
+            if ($attempt < $maxRetries) {
+                sleep($retryDelay);
+                $retryDelay *= 2; // Exponential backoff
+                continue;
+            }
+            throw new Exception("Failed to download release after $maxRetries attempts: $lastError");
+        }
+
         curl_close($ch);
         fclose($fp);
-        throw new Exception("Failed to download release: $error");
-    }
-    
-    curl_close($ch);
-    fclose($fp);
-    
-    if ($httpCode !== 200) {
-        throw new Exception("Failed to download release: HTTP $httpCode");
+
+        // Success
+        if ($lastHttpCode === 200) {
+            break;
+        }
+        
+        // Retry on 5xx errors
+        if ($lastHttpCode >= 500 && $attempt < $maxRetries) {
+            sleep($retryDelay);
+            $retryDelay *= 2;
+            continue;
+        }
+        
+        throw new Exception("Failed to download release: HTTP $lastHttpCode (attempt $attempt/$maxRetries). URL: $zipUrl");
     }
     
     $_SESSION['zip_file'] = $zipFile;
@@ -245,18 +278,34 @@ function ajaxDownloadRelease(array $releaseInfo): int
 
 function ajaxExtractRelease(bool $isUpdate = false): int
 {
+    $extractLog = [];
     $zipFile = $_SESSION['zip_file'] ?? TEMP_DIR . '/release.zip';
     $isReleaseAsset = $_SESSION['is_release_asset'] ?? false;
     
+    $extractLog[] = "Starting extraction...";
+    $extractLog[] = "Zip file: $zipFile";
+    $extractLog[] = "Is release asset: " . ($isReleaseAsset ? 'yes' : 'no');
+    $extractLog[] = "INSTALL_DIR: " . INSTALL_DIR;
+    $extractLog[] = "SCHEMA_FILE target: " . SCHEMA_FILE;
+    $extractLog[] = "SECRETS_FILE target: " . SECRETS_FILE;
+    
+    // Check if parent directory is writable
+    $parentDir = dirname(SCHEMA_FILE);
+    $parentWritable = is_writable($parentDir);
+    $extractLog[] = "Parent dir: $parentDir";
+    $extractLog[] = "Parent dir writable: " . ($parentWritable ? 'yes' : 'NO! This may cause problems');
+
     if (!file_exists($zipFile)) {
         throw new Exception('Release zip file not found');
     }
-    
+
     $zip = new ZipArchive();
     if ($zip->open($zipFile) !== true) {
         throw new Exception('Failed to open zip file');
     }
     
+    $extractLog[] = "Zip opened successfully, contains " . $zip->numFiles . " files";
+
     // Find the root folder in the zip (GitHub zipball adds a folder like "repo-version")
     // Release assets created by our workflow have no root folder
     $rootFolder = '';
@@ -344,14 +393,28 @@ function ajaxExtractRelease(bool $isUpdate = false): int
             
             $content = $zip->getFromIndex($i);
             if ($content !== false) {
-                file_put_contents($targetPath, $content);
-                $fileCount++;
+                $result = file_put_contents($targetPath, $content);
+                if ($result === false) {
+                    $extractLog[] = "FAILED to write: $targetPath";
+                } else {
+                    $fileCount++;
+                    // Log important files
+                    if (str_contains($targetPath, 'schema.sql') || str_contains($targetPath, 'index.php') || str_contains($targetPath, 'config.php')) {
+                        $extractLog[] = "Extracted: $targetPath ($result bytes)";
+                    }
+                }
             }
         }
     }
-    
+
     $zip->close();
     
+    $extractLog[] = "Extraction complete. Files extracted: $fileCount";
+    $extractLog[] = "schema.sql exists after extraction: " . (file_exists(SCHEMA_FILE) ? 'YES at ' . SCHEMA_FILE : 'NO!');
+    
+    // Store extraction log in session for debugging
+    $_SESSION['extract_log'] = $extractLog;
+
     // Clean up zip file
     unlink($zipFile);
     if (is_dir(TEMP_DIR)) {
@@ -984,6 +1047,40 @@ function createSecretsFileEarly(array $config): void
         small {
             color: var(--text-muted);
         }
+        
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        
+        .footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        
+        .footer a:hover {
+            color: var(--primary);
+        }
+        
+        .footer .version {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+        
+        .footer .separator {
+            margin: 0 0.75rem;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -1002,6 +1099,26 @@ function createSecretsFileEarly(array $config): void
         };
         ?>
     </div>
+    
+    <footer class="footer">
+        <a href="https://github.com/<?= GITHUB_REPO ?>" target="_blank" rel="noopener">
+            SlimStorage
+        </a>
+        <?php 
+        $version = $_SESSION['release_info']['tag_name'] ?? null;
+        if ($version): 
+        ?>
+        <span class="version"><?= htmlspecialchars($version) ?></span>
+        <?php endif; ?>
+        <span class="separator">•</span>
+        <a href="https://github.com/<?= GITHUB_REPO ?>" target="_blank" rel="noopener">
+            GitHub
+        </a>
+        <span class="separator">•</span>
+        <a href="https://github.com/<?= GITHUB_REPO ?>/issues" target="_blank" rel="noopener">
+            Report Issue
+        </a>
+    </footer>
 </body>
 </html>
 
@@ -1165,28 +1282,32 @@ function checkRequirements(): array
 function renderDownloadStep(): void
 {
     $isUpdate = $_SESSION['update_mode'] ?? false;
-    
+
     ?>
     <h1><?= $isUpdate ? '📥 Downloading Update' : '📥 Downloading SlimStorage' ?></h1>
     <p class="subtitle">Fetching the latest release from GitHub...</p>
+    
+    <div id="version-info" class="alert alert-info" style="display: none;">
+        <strong>Version:</strong> <span id="version-number">checking...</span>
+    </div>
 
     <div id="download-status" class="requirements">
         <div class="requirement">
             <span id="status-fetch">⏳</span>
-            <span>Fetching release information...</span>
+            <span id="status-fetch-text">Fetching release information...</span>
         </div>
         <div class="requirement">
             <span id="status-download">⏳</span>
-            <span>Downloading release package...</span>
+            <span id="status-download-text">Downloading release package...</span>
         </div>
         <div class="requirement">
             <span id="status-extract">⏳</span>
-            <span>Extracting files...</span>
+            <span id="status-extract-text">Extracting files...</span>
         </div>
         <?php if (!$isUpdate): ?>
         <div class="requirement">
             <span id="status-schema">⏳</span>
-            <span>Preparing database schema...</span>
+            <span id="status-schema-text">Preparing database schema...</span>
         </div>
         <?php endif; ?>
     </div>
@@ -1250,11 +1371,15 @@ function renderDownloadStep(): void
                 if (!data.success) {
                     throw new Error(data.error || 'Failed to fetch release information');
                 }
+
+                // Show version info
+                document.getElementById('version-info').style.display = 'block';
+                document.getElementById('version-number').textContent = data.version || 'unknown';
                 
-                updateStatus('status-fetch', '✓', 'Release information fetched');
-                
-                // Step 2: Download
-                updateStatus('status-download', '⏳', 'Downloading release package...');
+                updateStatus('status-fetch', '✓', 'Release ' + (data.version || '') + ' found');
+
+                // Step 2: Download (with retry info)
+                updateStatus('status-download', '⏳', 'Downloading release package (may retry on errors)...');
                 const downloadResponse = await fetch('?step=download&action=download');
                 const downloadData = await downloadResponse.json();
                 
@@ -1784,6 +1909,16 @@ function renderDatabaseStep(): void
     $debugLog[] = "SECRETS_FILE: " . SECRETS_FILE;
     $debugLog[] = "SECRETS_FILE exists: " . (file_exists(SECRETS_FILE) ? 'yes' : 'NO!');
     $debugLog[] = "SCHEMA_FILE: " . SCHEMA_FILE;
+    $debugLog[] = "Parent dir writable: " . (is_writable(dirname(SCHEMA_FILE)) ? 'yes' : 'NO!');
+    
+    // Include extraction log if available
+    if (!empty($_SESSION['extract_log'])) {
+        $debugLog[] = "--- EXTRACTION LOG ---";
+        foreach ($_SESSION['extract_log'] as $log) {
+            $debugLog[] = "  " . $log;
+        }
+        $debugLog[] = "--- END EXTRACTION LOG ---";
+    }
 
     ?>
     <h1>Database Setup</h1>
@@ -1802,8 +1937,14 @@ function renderDatabaseStep(): void
         
         $debugLog[] = "Database connection successful!";
 
-        if ($isUpdate) {
-            // For updates, just verify the connection and skip schema creation
+        // Check if tables already exist
+        $stmt = $pdo->query("SHOW TABLES LIKE '{$prefix}%'");
+        $existingTables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $tablesExist = count($existingTables) > 0;
+        $debugLog[] = "Existing tables check: " . ($tablesExist ? count($existingTables) . " tables found" : "NO tables found");
+        
+        if ($isUpdate && $tablesExist) {
+            // For updates with existing tables, just verify the connection and skip schema creation
             ?>
             <div class="alert alert-success">
                 ✓ Database connection verified! Your existing database will be preserved.
@@ -1816,11 +1957,15 @@ function renderDatabaseStep(): void
                 </div>
                 <div class="requirement">
                     <span class="requirement-ok">✓</span>
-                    <span>Existing tables preserved</span>
+                    <span>Existing tables preserved (<?= count($existingTables) ?> tables)</span>
                 </div>
             </div>
             <?php
         } else {
+            // Fresh install OR update mode with no existing tables - need to run schema
+            if ($isUpdate && !$tablesExist) {
+                $debugLog[] = "Update mode but no tables exist - will create schema";
+            }
             // Get SQL schema file (located one folder up from web root)
             $debugLog[] = "Looking for schema file at: " . SCHEMA_FILE;
             $debugLog[] = "Schema file exists: " . (file_exists(SCHEMA_FILE) ? 'yes' : 'NO!');
@@ -1901,6 +2046,11 @@ function renderDatabaseStep(): void
             }
 
             ?>
+            <?php if ($isUpdate): ?>
+            <div class="alert alert-info">
+                ℹ️ Update mode detected, but no existing tables were found. Schema has been created.
+            </div>
+            <?php endif; ?>
             <div class="alert alert-success">
                 ✓ Database tables created successfully! (<?= $executedCount ?> statements, <?= count($tables) ?> tables)
             </div>
@@ -1979,6 +2129,10 @@ function renderCompleteStep(): void
         @unlink(SCHEMA_FILE);
     }
 
+    // Save version to VERSION file for display in footer
+    $versionFile = INSTALL_DIR . '/VERSION';
+    @file_put_contents($versionFile, $version);
+
     ?>
     <h1>🎉 <?= $isUpdate ? 'Update Complete!' : 'Installation Complete!' ?></h1>
     <p class="subtitle"><?= $isUpdate ? 'SlimStorage has been updated to ' . htmlspecialchars($version) : 'Your SlimStorage instance is ready to use' ?></p>
@@ -1986,8 +2140,6 @@ function renderCompleteStep(): void
     <div class="alert alert-success">
         <strong>✓ <?= $isUpdate ? 'Update' : 'Installation' ?> successful!</strong><br>
         <?= $isUpdate ? 'All files have been updated to the latest version.' : 'All components have been configured and the database has been initialized.' ?>
-        <br><br>
-        <strong>Redirecting to your site in <span id="countdown">5</span> seconds...</strong>
     </div>
 
     <h3 style="margin-top: 2rem; margin-bottom: 1rem;">🚀 Next Steps</h3>
@@ -2050,37 +2202,9 @@ Schema API: <?= htmlspecialchars($baseUrl) ?>/api/schema/
     </div>
 
     <div class="btn-group">
-        <a href="<?= htmlspecialchars($baseUrl) ?>" class="btn btn-success" id="openSiteBtn">Open SlimStorage Now →</a>
-        <button onclick="cancelRedirect(); if(confirm('Are you sure you want to delete the installer?')) { window.location.href='?step=delete'; }" class="btn btn-danger">Delete Installer & Stay</button>
+        <a href="<?= htmlspecialchars($baseUrl) ?>" class="btn btn-success">Open SlimStorage Now →</a>
+        <button onclick="if(confirm('Are you sure you want to delete the installer?')) { window.location.href='?step=delete'; }" class="btn btn-danger">Delete Installer</button>
     </div>
-
-    <script>
-        let countdown = 5;
-        let redirectTimeout;
-        const countdownEl = document.getElementById('countdown');
-        const targetUrl = '<?= htmlspecialchars($baseUrl) ?>';
-        
-        function updateCountdown() {
-            countdown--;
-            if (countdown <= 0) {
-                window.location.href = targetUrl;
-            } else {
-                countdownEl.textContent = countdown;
-                redirectTimeout = setTimeout(updateCountdown, 1000);
-            }
-        }
-        
-        function cancelRedirect() {
-            clearTimeout(redirectTimeout);
-            countdownEl.parentElement.innerHTML = 'Redirect cancelled.';
-        }
-        
-        // Start countdown
-        redirectTimeout = setTimeout(updateCountdown, 1000);
-        
-        // Cancel redirect if user clicks on links
-        document.getElementById('openSiteBtn').addEventListener('click', cancelRedirect);
-    </script>
 
     <?php
     // Clear session

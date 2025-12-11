@@ -1024,3 +1024,42 @@ textarea.form-control {
         display: none !important;
     }
 }
+
+/* ============================================
+   Footer
+   ============================================ */
+
+.site-footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    margin-top: 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.site-footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.site-footer a:hover {
+    color: var(--primary);
+}
+
+.site-footer .version {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--primary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+.site-footer .separator {
+    margin: 0 0.75rem;
+    opacity: 0.5;
+}

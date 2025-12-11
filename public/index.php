@@ -59,9 +59,23 @@ try {
     <style>
         body {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .site-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            z-index: 10;
         }
 
         .orb {
@@ -303,6 +317,27 @@ try {
             </div>
         </div>
     </div>
+    
+    <footer class="site-footer">
+        <a href="https://github.com/kibotu/SlimStorage" target="_blank" rel="noopener">
+            SlimStorage
+        </a>
+        <?php 
+        $versionFile = __DIR__ . '/VERSION';
+        $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : null;
+        if ($version): 
+        ?>
+        <span class="version"><?= htmlspecialchars($version) ?></span>
+        <?php endif; ?>
+        <span class="separator">•</span>
+        <a href="https://github.com/kibotu/SlimStorage" target="_blank" rel="noopener">
+            GitHub
+        </a>
+        <span class="separator">•</span>
+        <a href="https://github.com/kibotu/SlimStorage/issues" target="_blank" rel="noopener">
+            Report Issue
+        </a>
+    </footer>
 </body>
 </html>
 

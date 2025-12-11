@@ -5331,5 +5331,26 @@ function getLogStatusStats(PDO $pdo, array $config, string $email, ?int $apiKeyI
             });
         });
     </script>
+    
+    <footer class="site-footer">
+        <a href="https://github.com/kibotu/SlimStorage" target="_blank" rel="noopener">
+            SlimStorage
+        </a>
+        <?php 
+        $versionFile = __DIR__ . '/../VERSION';
+        $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : null;
+        if ($version): 
+        ?>
+        <span class="version"><?= htmlspecialchars($version) ?></span>
+        <?php endif; ?>
+        <span class="separator">•</span>
+        <a href="https://github.com/kibotu/SlimStorage" target="_blank" rel="noopener">
+            GitHub
+        </a>
+        <span class="separator">•</span>
+        <a href="https://github.com/kibotu/SlimStorage/issues" target="_blank" rel="noopener">
+            Report Issue
+        </a>
+    </footer>
 </body>
 </html>

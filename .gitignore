@@ -32,3 +32,6 @@ Thumbs.db
 temp_install/
 *.tmp
 
+# Generated version file (created by installer)
+public/VERSION
+
