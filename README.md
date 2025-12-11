@@ -294,6 +294,60 @@ Your `.secrets.yml` and data are preserved during updates.
 
 ---
 
+## Scripts
+
+Utility scripts for testing, migrations, and database management. All scripts read credentials from `.secrets.yml`.
+
+### run-tests.sh
+
+Runs the full API test suite against your installation.
+
+```bash
+./scripts/run-tests.sh https://yourdomain.com/api YOUR_API_KEY
+```
+
+What it does:
+- Runs **Key/Value Store API tests** — SET, GET, DELETE, LIST, EXISTS, CLEAR
+- Runs **Event API tests** — PUSH, QUERY, STATS, date range filtering
+- Runs **Schema API tests** — Schema definition, aggregation queries
+- Prints a summary with pass/fail counts
+
+Requires Python 3 and `uv` (auto-installs if missing).
+
+---
+
+### db-migrate.sh
+
+Safe, incremental database migrations. Run as many times as needed — it skips already-applied changes.
+
+```bash
+./scripts/db-migrate.sh [action]
+```
+
+| Action | What it does |
+|--------|--------------|
+| `all` | Run all migrations (default) |
+| `indexes` | Add performance indexes, cursor pagination support |
+| `schema` | Add `event_schemas` and `event_aggregations` tables |
+| `stats` | Add statistics tables, populate from existing data |
+| `optimize` | Analyze table sizes, show fragmentation, suggest optimizations |
+
+For large tables (9M+ rows), the `stats` migration may take 10-30 minutes.
+
+---
+
+### db-recreate.sh
+
+**⚠️ Destructive.** Drops all tables and recreates the schema from scratch. All data is permanently deleted.
+
+```bash
+./scripts/db-recreate.sh
+```
+
+Use this when you want a clean slate — fresh install, testing, or starting over. The script asks for confirmation before proceeding.
+
+---
+
 ## Requirements
 
 - PHP 8.1+
