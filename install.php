@@ -57,10 +57,12 @@ $currentStep = $_GET['step'] ?? 'welcome';
 
 // Security: Prevent access after installation is complete (unless updating or in active installation)
 // Allow database and complete steps if we're in an active installation session
-$allowedStepsWithSecrets = ['database', 'complete', 'delete'];
+// Always allow delete step (it just removes the installer file, no security concern)
+$allowedStepsWithSecrets = ['database', 'complete'];
 $isAllowedStep = in_array($currentStep, $allowedStepsWithSecrets) && $isActiveInstallation;
+$isDeleteStep = $currentStep === 'delete';
 
-if (file_exists(SECRETS_FILE) && !isset($_GET['force']) && !$isUpdateMode && !$isAllowedStep) {
+if (file_exists(SECRETS_FILE) && !isset($_GET['force']) && !$isUpdateMode && !$isAllowedStep && !$isDeleteStep) {
     die('⚠️ Installation already complete. Delete .secrets.yml or add ?force=1 to reinstall, or ?update=1 to update.');
 }
 

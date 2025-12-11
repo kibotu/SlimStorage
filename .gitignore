@@ -35,3 +35,6 @@ temp_install/
 # Generated version file (created by installer)
 public/VERSION
 
+# Version cache (for update check)
+public/.version-cache
+

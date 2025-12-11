@@ -326,13 +326,37 @@ try {
         $versionFile = __DIR__ . '/VERSION';
         $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : null;
         if ($version): 
+            // Check for newer version (cached, checks GitHub API once per hour)
+            $latestVersion = null;
+            $cacheFile = __DIR__ . '/.version-cache';
+            $cacheMaxAge = 3600; // 1 hour
+            
+            if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheMaxAge) {
+                $latestVersion = trim(file_get_contents($cacheFile));
+            } else {
+                // Fetch latest version from GitHub API
+                $ch = curl_init('https://api.github.com/repos/kibotu/SlimStorage/releases/latest');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'SlimStorage');
+                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if ($httpCode === 200 && $response) {
+                    $data = json_decode($response, true);
+                    if (!empty($data['tag_name'])) {
+                        $latestVersion = $data['tag_name'];
+                        @file_put_contents($cacheFile, $latestVersion);
+                    }
+                }
+            }
+            
+            $hasUpdate = $latestVersion && version_compare(ltrim($latestVersion, 'v'), ltrim($version, 'v'), '>');
         ?>
-        <span class="version"><?= htmlspecialchars($version) ?></span>
+        <span class="version"><?= htmlspecialchars($version) ?><?php if ($hasUpdate): ?> <a href="https://github.com/kibotu/SlimStorage/releases/latest" target="_blank" rel="noopener" style="color: #10b981;">(<?= htmlspecialchars($latestVersion) ?> available)</a><?php endif; ?></span>
         <?php endif; ?>
-        <span class="separator">•</span>
-        <a href="https://github.com/kibotu/SlimStorage" target="_blank" rel="noopener">
-            GitHub
-        </a>
         <span class="separator">•</span>
         <a href="https://github.com/kibotu/SlimStorage/issues" target="_blank" rel="noopener">
             Report Issue
