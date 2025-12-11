@@ -45,11 +45,16 @@ const PUBLIC_DIR = INSTALL_DIR . '/public';
 const TEMP_DIR = INSTALL_DIR . '/temp_install';
 const DOWNLOAD_TIMEOUT = 300; // 5 minutes
 
-// Detect update mode
-$isUpdateMode = isset($_GET['update']) && $_GET['update'] === '1';
-
 // Start session early (needed for installation flow tracking)
 session_start();
+
+// Detect update mode from GET parameter OR session (session persists across steps)
+$isUpdateMode = (isset($_GET['update']) && $_GET['update'] === '1') || ($_SESSION['update_mode'] ?? false);
+
+// Store update mode in session (do this early so it persists)
+if ($isUpdateMode) {
+    $_SESSION['update_mode'] = true;
+}
 
 // Check if we're in the middle of an active installation (config was just saved)
 $isActiveInstallation = isset($_SESSION['db_connection_ok']) || isset($_SESSION['config']);
@@ -64,11 +69,6 @@ $isDeleteStep = $currentStep === 'delete';
 
 if (file_exists(SECRETS_FILE) && !isset($_GET['force']) && !$isUpdateMode && !$isAllowedStep && !$isDeleteStep) {
     die('⚠️ Installation already complete. Delete .secrets.yml or add ?force=1 to reinstall, or ?update=1 to update.');
-}
-
-// Store update mode in session
-if ($isUpdateMode) {
-    $_SESSION['update_mode'] = true;
 }
 
 // Handle different installation steps (use $currentStep from earlier)
@@ -1063,6 +1063,7 @@ function createSecretsFileEarly(array $config): void
             'process' => processConfiguration(),
             'database' => renderDatabaseStep(),
             'complete' => renderCompleteStep(),
+            'delete' => renderDeleteStep(),
             default => renderWelcomeStep()
         };
         ?>
@@ -2160,20 +2161,46 @@ Schema API: <?= htmlspecialchars($baseUrl) ?>/api/schema/
 }
 
 // ============================================================================
-// Self-delete handler
+// STEP 7: Delete Installer
 // ============================================================================
 
-if ($step === 'delete') {
-    if (unlink(__FILE__)) {
-        echo '<h1>✓ Installer Deleted</h1>';
-        echo '<p>The installer has been successfully removed.</p>';
-        $domain = $_SERVER['HTTP_HOST'];
-        $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-        echo '<a href="' . $protocol . '://' . $domain . '" class="btn">Go to SlimStorage →</a>';
+function renderDeleteStep(): void
+{
+    $domain = $_SERVER['HTTP_HOST'];
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+    $baseUrl = $protocol . '://' . $domain;
+    
+    // Attempt to delete the installer file
+    $deleted = @unlink(__FILE__);
+    
+    if ($deleted) {
+        ?>
+        <h1>✓ Installer Deleted</h1>
+        <p class="subtitle">The installer has been successfully removed.</p>
+        
+        <div class="alert alert-success">
+            <strong>✓ Security step complete!</strong><br>
+            The install.php file has been deleted from your server.
+        </div>
+        
+        <div class="btn-group">
+            <a href="<?= htmlspecialchars($baseUrl) ?>" class="btn btn-success">Go to SlimStorage →</a>
+        </div>
+        <?php
     } else {
-        echo '<h1>⚠️ Manual Deletion Required</h1>';
-        echo '<p>Could not automatically delete installer. Please manually delete <code>install.php</code> from your server.</p>';
+        ?>
+        <h1>⚠️ Manual Deletion Required</h1>
+        <p class="subtitle">Could not automatically delete the installer file.</p>
+        
+        <div class="alert alert-warning">
+            <strong>Please manually delete:</strong><br>
+            <code>install.php</code> from your server for security.
+        </div>
+        
+        <div class="btn-group">
+            <a href="<?= htmlspecialchars($baseUrl) ?>" class="btn">Go to SlimStorage →</a>
+        </div>
+        <?php
     }
-    exit;
 }
 
