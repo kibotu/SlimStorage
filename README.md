@@ -2,7 +2,7 @@
 
 A secure, high-performance key/value store and event API built with PHP 8.1+ and MySQL. Features Google OAuth authentication, granular API key management, real-time usage monitoring, and comprehensive security.
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-8892BF.svg)](https://php.net/)
 [![MySQL Version](https://img.shields.io/badge/mysql-%3E%3D5.7-4479A1.svg)](https://www.mysql.com/)
 
@@ -427,7 +427,7 @@ Contributions are welcome! Please:
 
 ## License
 
-[MIT License](LICENSE)
+[Apache License 2.0](LICENSE)
 
 ## Support
 
