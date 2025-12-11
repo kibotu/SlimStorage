@@ -122,6 +122,20 @@ Every API request logged. Filter by status, method, endpoint. Great for debuggin
 
 ---
 
+### API Documentation
+
+![API Documentation](docs/admin-api-doc.png)
+
+Full API reference built right into the dashboard. Every endpoint with copy-paste ready curl commands:
+
+- **Key/Value Store API** — SET, GET, EXISTS, DELETE, LIST, CLEAR operations with example requests
+- **Event Data API** — Push single/batch events, query by date range, get statistics
+- **Schema API** — Define schemas, query aggregated data, rebuild aggregations
+
+Each command is pre-filled with your base URL and includes proper headers. Just copy, paste your API key, and run.
+
+---
+
 ## Superadmin Panel
 
 If you're the system admin (configured in `.secrets.yml`), you get access to the superadmin panel.
