@@ -1,0 +1,9 @@
+# API URL Rewriting
+RewriteEngine On
+
+# Preserve URL encoding for special characters in keys
+# This allows keys with slashes and other special characters to work
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L,B,NE]
+

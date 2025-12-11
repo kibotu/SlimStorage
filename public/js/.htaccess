@@ -1,0 +1,32 @@
+# JavaScript files caching
+# ONLY cache d3.v7.min.js (external library that doesn't change)
+# DO NOT cache application JavaScript files
+
+<IfModule mod_headers.c>
+    # Cache ONLY d3.v7.min.js for 7 days
+    <Files "d3.v7.min.js">
+        Header set Cache-Control "public, max-age=604800, must-revalidate"
+        FileETag MTime Size
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+    </Files>
+    
+    # Prevent caching of all other JavaScript files
+    <FilesMatch "\.js$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+
+# Enable compression for JavaScript files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE text/javascript
+</IfModule>
+
+# Set correct MIME type for JavaScript
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+</IfModule>
