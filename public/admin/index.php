@@ -74,21 +74,21 @@ try {
     $sessionId = $_COOKIE['session_id'] ?? null;
     if (!$sessionId) {
         logSecurityEvent('missing_session_cookie', ['page' => 'admin_dashboard']);
-        header('Location: /');
+        header('Location: ' . getBasePath() . '/');
         exit;
     }
     
     // Validate session ID format
     if (!validateSessionIdFormat($sessionId)) {
         logSecurityEvent('invalid_session_format', ['page' => 'admin_dashboard']);
-        header('Location: /');
+        header('Location: ' . getBasePath() . '/');
         exit;
     }
     
     $session = validateSession($pdo, $config, $sessionId);
     if (!$session) {
         logSecurityEvent('invalid_session', ['page' => 'admin_dashboard']);
-        header('Location: /');
+        header('Location: ' . getBasePath() . '/');
         exit;
     }
     
@@ -117,15 +117,15 @@ try {
         
         if ($action === 'generate') {
             generateNewApiKey($pdo, $config, $userEmail);
-            header('Location: /admin/');
+            header('Location: ' . getBasePath() . '/admin/');
             exit;
         } elseif ($action === 'delete' && isset($_POST['api_key_id'])) {
             deleteApiKey($pdo, $config, $userEmail, (int)$_POST['api_key_id']);
-            header('Location: /admin/');
+            header('Location: ' . getBasePath() . '/admin/');
             exit;
         } elseif ($action === 'rename' && isset($_POST['api_key_id']) && isset($_POST['name'])) {
             renameApiKey($pdo, $config, $userEmail, (int)$_POST['api_key_id'], $_POST['name']);
-            header('Location: /admin/');
+            header('Location: ' . getBasePath() . '/admin/');
             exit;
         }
     }
@@ -1575,9 +1575,9 @@ function getLogStatusStats(PDO $pdo, array $config, string $email, ?int $apiKeyI
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Developer Dashboard | API Keys, Usage & Data</title>
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(getBasePath()) ?>/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="<?= htmlspecialchars(getBasePath()) ?>/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="<?= htmlspecialchars(getBasePath()) ?>/css/style.css">
     <style>
         .section { display: none; }
         .section.active { display: block; }
@@ -2275,7 +2275,7 @@ function getLogStatusStats(PDO $pdo, array $config, string $email, ?int $apiKeyI
 <body>
     <header class="header">
         <div class="container header-content">
-            <a href="/admin/" class="logo">
+            <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/" class="logo">
                 <span class="logo-icon">🚀</span>
                 <span class="hidden-mobile">Dashboard</span>
             </a>
@@ -2291,11 +2291,11 @@ function getLogStatusStats(PDO $pdo, array $config, string $email, ?int $apiKeyI
                     <?= htmlspecialchars($userInitials) ?>
                 </div>
                 <?php if ($isSuperadmin): ?>
-                    <a href="/admin/superadmin.php" class="btn btn-primary btn-sm badge-superadmin" title="Superadmin">
+                    <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/superadmin.php" class="btn btn-primary btn-sm badge-superadmin" title="Superadmin">
                         🛡️ Superadmin
                     </a>
                 <?php endif; ?>
-                <a href="/admin/logout.php" class="btn btn-ghost btn-sm" title="Logout">
+                <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/logout.php" class="btn btn-ghost btn-sm" title="Logout">
                     Logout
                 </a>
             </div>
@@ -3617,7 +3617,7 @@ function getLogStatusStats(PDO $pdo, array $config, string $email, ?int $apiKeyI
         &copy; <?= date('Y') ?> Kibotu Services. All rights reserved.
     </footer>
 
-    <script src="/js/d3.v7.min.js"></script>
+    <script src="<?= htmlspecialchars(getBasePath()) ?>/js/d3.v7.min.js"></script>
     <script>
         // CSRF token for AJAX requests
         const csrfToken = '<?= htmlspecialchars(getCSRFToken()) ?>';

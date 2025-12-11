@@ -53,9 +53,9 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SlimStorage - Secure Key/Value Store</title>
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(getBasePath()) ?>/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="<?= htmlspecialchars(getBasePath()) ?>/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="<?= htmlspecialchars(getBasePath()) ?>/css/style.css">
     <style>
         body {
             display: flex;
@@ -257,10 +257,10 @@ try {
                 </div>
             </div>
             <div class="flex flex-col gap-2">
-                <a href="/admin/" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+                <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
                     🚀 Go to Dashboard
                 </a>
-                <a href="/admin/logout.php" class="btn btn-ghost" style="width: 100%;">
+                <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/logout.php" class="btn btn-ghost" style="width: 100%;">
                     Sign Out
                 </a>
             </div>

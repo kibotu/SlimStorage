@@ -205,7 +205,47 @@ function getDomainName(array $config): string
 function getBaseUrl(array $config): string
 {
     $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-    return $scheme . '://' . getDomainName($config);
+    return $scheme . '://' . getDomainName($config) . getBasePath();
+}
+
+/**
+ * Get the base path for subdirectory installations.
+ * 
+ * This detects when the app is installed in a subdirectory (e.g., /myapp/)
+ * and returns the appropriate base path for URLs.
+ * 
+ * @return string Base path (e.g., "" for root, "/myapp" for subdirectory)
+ */
+function getBasePath(): string
+{
+    static $basePath = null;
+    
+    if ($basePath !== null) {
+        return $basePath;
+    }
+    
+    // Get the script path from SCRIPT_NAME
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    
+    // Find the directory containing the script
+    $scriptDir = dirname($scriptName);
+    
+    // Handle /admin/index.php -> get parent directory
+    // Handle /index.php -> get root
+    // Handle /api/index.php -> get parent directory
+    if (preg_match('#^(.*/)?(?:admin|api)/?$#', $scriptDir)) {
+        $scriptDir = dirname($scriptDir);
+    }
+    
+    // Clean up the path
+    $basePath = rtrim($scriptDir, '/');
+    
+    // Ensure we don't return just "/" - normalize to empty string for root
+    if ($basePath === '/' || $basePath === '.') {
+        $basePath = '';
+    }
+    
+    return $basePath;
 }
 
 /**

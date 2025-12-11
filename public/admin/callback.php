@@ -54,11 +54,11 @@ try {
     setSecureSessionCookie($sessionId, $expiresAt->getTimestamp());
 
     // Redirect to admin dashboard
-    header('Location: /admin/');
+    header('Location: ' . getBasePath() . '/admin/');
     exit;
 
 } catch (Exception $e) {
-    header('Location: /?error=' . urlencode($e->getMessage()));
+    header('Location: ' . getBasePath() . '/?error=' . urlencode($e->getMessage()));
     exit;
 }
 

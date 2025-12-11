@@ -53,7 +53,7 @@ try {
     $session = getAuthenticatedUser($pdo, $config);
     if ($session === null) {
         logSecurityEvent('superadmin_access_denied', ['reason' => 'no_session']);
-        header('Location: /');
+        header('Location: ' . getBasePath() . '/');
         exit;
     }
 
@@ -69,7 +69,7 @@ try {
     if (!isSuperadmin($userEmail, $config)) {
         logSecurityEvent('superadmin_access_denied', ['reason' => 'not_superadmin', 'email' => $userEmail]);
         http_response_code(403);
-        echo '<!DOCTYPE html><html><head><title>Access Denied</title></head><body style="font-family: system-ui; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc;"><div style="text-align: center;"><h1>⛔ Access Denied</h1><p style="color: #94a3b8;">You do not have permission to access this page.</p><a href="/admin/" style="color: #3b82f6; text-decoration: none;">← Back to Dashboard</a></div></body></html>';
+        echo '<!DOCTYPE html><html><head><title>Access Denied</title></head><body style="font-family: system-ui; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc;"><div style="text-align: center;"><h1>⛔ Access Denied</h1><p style="color: #94a3b8;">You do not have permission to access this page.</p><a href="' . htmlspecialchars(getBasePath()) . '/admin/" style="color: #3b82f6; text-decoration: none;">← Back to Dashboard</a></div></body></html>';
         exit;
     }
 
@@ -94,7 +94,7 @@ try {
             default => null
         };
 
-        header('Location: /admin/superadmin.php');
+        header('Location: ' . getBasePath() . '/admin/superadmin.php');
         exit;
     }
 
@@ -488,9 +488,9 @@ function getSuccessRateStats(PDO $pdo, array $config): array {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Superadmin Dashboard | System Management</title>
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="shortcut icon" href="<?= htmlspecialchars(getBasePath()) ?>/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="<?= htmlspecialchars(getBasePath()) ?>/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="<?= htmlspecialchars(getBasePath()) ?>/css/style.css">
     <style>
         .section { display: none; }
         .section.active { display: block; }
@@ -583,7 +583,7 @@ function getSuccessRateStats(PDO $pdo, array $config): array {
 <body>
     <header class="header">
         <div class="container header-content">
-            <a href="/admin/superadmin.php" class="logo">
+            <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/superadmin.php" class="logo">
                 <span class="logo-icon">🛡️</span>
                 <span class="hidden-mobile">Superadmin</span>
             </a>
@@ -608,8 +608,8 @@ function getSuccessRateStats(PDO $pdo, array $config): array {
                 <a href="<?= htmlspecialchars($ftpUrl) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm hidden-mobile" title="FTP">
                     📁
                 </a>
-                <a href="/admin/" class="btn btn-secondary btn-sm">←<span class="hidden-mobile"> User</span></a>
-                <a href="/admin/logout.php" class="btn btn-ghost btn-sm">Logout</a>
+                <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/" class="btn btn-secondary btn-sm">←<span class="hidden-mobile"> User</span></a>
+                <a href="<?= htmlspecialchars(getBasePath()) ?>/admin/logout.php" class="btn btn-ghost btn-sm">Logout</a>
             </div>
         </div>
     </header>
@@ -979,7 +979,7 @@ function getSuccessRateStats(PDO $pdo, array $config): array {
         </div>
     </main>
     
-    <script src="/js/d3.v7.min.js"></script>
+    <script src="<?= htmlspecialchars(getBasePath()) ?>/js/d3.v7.min.js"></script>
     <script>
         // State
         let autoRefreshInterval = null;

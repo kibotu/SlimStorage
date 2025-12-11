@@ -1,5 +1,5 @@
 /* Import Local Fonts */
-@import url('/fonts/fonts.css');
+@import url('../fonts/fonts.css');
 
 :root {
     /* Color Palette - Dark Mode Default */

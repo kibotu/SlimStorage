@@ -34,6 +34,6 @@ try {
 }
 
 // Redirect to landing page
-header('Location: /');
+header('Location: ' . getBasePath() . '/');
 exit;
 
