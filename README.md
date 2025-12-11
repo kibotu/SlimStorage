@@ -2,6 +2,9 @@
 
 A self-hosted key/value store and event API. One PHP file to install, one dashboard to manage everything.
 
+[![GitHub Release](https://img.shields.io/github/v/release/kibotu/SlimStorage)](https://github.com/kibotu/SlimStorage/releases/latest)
+[![Create Release](https://github.com/kibotu/SlimStorage/actions/workflows/release.yml/badge.svg)](https://github.com/kibotu/SlimStorage/actions/workflows/release.yml)
+[![Deploy Preview](https://github.com/kibotu/SlimStorage/actions/workflows/preview.yml/badge.svg)](https://github.com/kibotu/SlimStorage/actions/workflows/preview.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-8892BF.svg)](https://php.net/)
 [![MySQL Version](https://img.shields.io/badge/mysql-%3E%3D5.7-4479A1.svg)](https://www.mysql.com/)
