@@ -1047,40 +1047,6 @@ function createSecretsFileEarly(array $config): void
         small {
             color: var(--text-muted);
         }
-        
-        .footer {
-            text-align: center;
-            padding: 1.5rem;
-            margin-top: 2rem;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-        
-        .footer a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: var(--transition);
-        }
-        
-        .footer a:hover {
-            color: var(--primary);
-        }
-        
-        .footer .version {
-            display: inline-block;
-            background: rgba(59, 130, 246, 0.15);
-            color: var(--primary);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-        }
-        
-        .footer .separator {
-            margin: 0 0.75rem;
-            opacity: 0.5;
-        }
     </style>
 </head>
 <body>
@@ -1099,26 +1065,6 @@ function createSecretsFileEarly(array $config): void
         };
         ?>
     </div>
-    
-    <footer class="footer">
-        <a href="https://github.com/<?= GITHUB_REPO ?>" target="_blank" rel="noopener">
-            SlimStorage
-        </a>
-        <?php 
-        $version = $_SESSION['release_info']['tag_name'] ?? null;
-        if ($version): 
-        ?>
-        <span class="version"><?= htmlspecialchars($version) ?></span>
-        <?php endif; ?>
-        <span class="separator">•</span>
-        <a href="https://github.com/<?= GITHUB_REPO ?>" target="_blank" rel="noopener">
-            GitHub
-        </a>
-        <span class="separator">•</span>
-        <a href="https://github.com/<?= GITHUB_REPO ?>/issues" target="_blank" rel="noopener">
-            Report Issue
-        </a>
-    </footer>
 </body>
 </html>
 
