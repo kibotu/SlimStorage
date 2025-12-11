@@ -391,7 +391,7 @@ Static preview with mock data. Explore the landing page, admin dashboard, and su
 
 ## Example Usage
 
-### Berlin Radiation Monitor
+### [Berlin Radiation Monitor]
 
 A real-world application using SlimStorage's Event API to collect and display Geiger counter measurements from Berlin.
 
@@ -404,6 +404,7 @@ A real-world application using SlimStorage's Event API to collect and display Ge
 - **Statistics** — Min/max ranges, averages, and daily exposure calculations
 
 [👉 View Live Statistics](https://storage.services.kibotu.net/geiger)
+[👉 View Radiation Monitor Blog Article](https://portfolio.kibotu.net/essays/2021/03/diy-geiger-counter/)
 
 ---
 
