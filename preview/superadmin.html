@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superadmin Dashboard | System Management</title>
+    <link rel="shortcut icon" href="../public/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="../public/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="../public/css/style.css">
+    <style>
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        .demo-badge {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+            z-index: 100;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.9; }
+        }
+
+        .demo-nav {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 100;
+        }
+        
+        /* Grid layouts for charts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            #global-storage-chart,
+            #global-api-usage-chart {
+                height: 300px !important;
+            }
+            
+            #top-endpoints-chart,
+            #success-rate-chart,
+            #global-dist-chart,
+            #top-requests-chart {
+                height: 250px !important;
+            }
+            
+            #api-usage-timeline-chart {
+                height: 280px !important;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">🎭 Demo Mode</div>
+    <div class="demo-nav">
+        <a href="index.html" class="btn btn-ghost btn-sm">← Landing</a>
+        <a href="admin.html" class="btn btn-secondary btn-sm">← Admin</a>
+    </div>
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="superadmin.html" class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="hidden-mobile">Superadmin</span>
+            </a>
+            <div class="flex items-center gap-2">
+                <span class="badge badge-superadmin hidden-mobile">ADMIN</span>
+                <div class="user-info-wrapper hidden-mobile">
+                    <span class="text-muted text-sm">admin@slimstore.app</span>
+                </div>
+                <div class="user-avatar-fallback">AD</div>
+                <button id="refreshToggle" class="btn btn-icon btn-sm" title="Toggle auto-refresh (5s)">
+                    ▶️
+                </button>
+                <a href="admin.html" class="btn btn-secondary btn-sm">←<span class="hidden-mobile"> User</span></a>
+                <a href="index.html" class="btn btn-ghost btn-sm">Logout</a>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container animate-fade-in" style="padding-top: 2rem; padding-bottom: 5rem;">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Accounts</div>
+                <div class="stat-value">47</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total API Keys</div>
+                <div class="stat-value">156</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Sessions</div>
+                <div class="stat-value">23</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Events</div>
+                <div class="stat-value">8,432,156</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total KV Pairs</div>
+                <div class="stat-value">12,847</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Events Table Size</div>
+                <div class="stat-value">2.34 GB</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total DB Size</div>
+                <div class="stat-value">2.89 GB</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">Expired Sessions</div>
+                <div class="stat-value">5</div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showSection('insights')">📈 <span class="hidden-mobile">Insights</span></button>
+            <button class="tab-btn" onclick="showSection('sessions')">📋 <span class="hidden-mobile">Sessions</span></button>
+            <button class="tab-btn" onclick="showSection('accounts')">👥 <span class="hidden-mobile">Accounts</span></button>
+            <button class="tab-btn" onclick="showSection('apikeys')">🔑 <span class="hidden-mobile">API Keys</span></button>
+        </div>
+        
+        <!-- Insights Section -->
+        <div id="insights" class="section active">
+            <!-- Top Endpoints & Success Error Rate -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Top Endpoints</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="top-endpoints-chart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">✅ Success vs Error Rate</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="success-rate-chart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Usage Trends -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title">📊 API Usage Trends (Last 30 Days)</h3>
+                </div>
+                <div class="card-body">
+                    <div id="api-usage-timeline-chart" style="width: 100%; height: 350px;"></div>
+                </div>
+            </div>
+
+            <!-- Global Data Distribution + Top Active Accounts -->
+            <div class="grid-2" style="margin-top: 1.5rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">💾 Global Data Distribution</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="global-dist-chart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔥 Top Active Accounts (Requests)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="top-requests-chart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Most Valuable Accounts (Storage) -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title">💎 Most Valuable Accounts (Storage)</h3>
+                </div>
+                <div class="card-body">
+                    <div id="global-storage-chart" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+
+            <!-- Most Valuable Accounts (API Usage) -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title">🚀 Most Valuable Accounts (API Usage)</h3>
+                </div>
+                <div class="card-body">
+                    <div id="global-api-usage-chart" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Section -->
+        <div id="sessions" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Active Sessions</h3>
+                    <button class="btn btn-primary btn-sm">
+                        🧹 Cleanup 5 Expired
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Email</th>
+                                <th>Session ID</th>
+                                <th>Created</th>
+                                <th>Expires</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Status"><span class="badge badge-success">Active</span></td>
+                                <td data-label="Email">john.dev@gmail.com</td>
+                                <td data-label="Session ID"><code class="text-muted">a1b2c3d4e5f6g7h8...</code></td>
+                                <td data-label="Created" class="text-muted">Dec 11 14:30</td>
+                                <td data-label="Expires" class="text-muted">Dec 11 22:30</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Status"><span class="badge badge-success">Active</span></td>
+                                <td data-label="Email">sarah.tech@company.io</td>
+                                <td data-label="Session ID"><code class="text-muted">x9y8z7w6v5u4t3s2...</code></td>
+                                <td data-label="Created" class="text-muted">Dec 11 13:15</td>
+                                <td data-label="Expires" class="text-muted">Dec 11 21:15</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Status"><span class="badge badge-success">Active</span></td>
+                                <td data-label="Email">admin@slimstore.app</td>
+                                <td data-label="Session ID"><code class="text-muted">m1n2o3p4q5r6s7t8...</code></td>
+                                <td data-label="Created" class="text-muted">Dec 11 15:00</td>
+                                <td data-label="Expires" class="text-muted">Dec 11 23:00</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Status"><span class="badge badge-danger">Expired</span></td>
+                                <td data-label="Email">old.user@example.com</td>
+                                <td data-label="Session ID"><code class="text-muted">f1e2d3c4b5a6z7y8...</code></td>
+                                <td data-label="Created" class="text-muted">Dec 10 08:00</td>
+                                <td data-label="Expires" class="text-muted">Dec 10 16:00</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Accounts Section -->
+        <div id="accounts" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Registered Accounts</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>API Keys</th>
+                                <th>KV Pairs</th>
+                                <th>First Created</th>
+                                <th>Last Activity</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Email">
+                                    admin@slimstore.app
+                                    <span class="badge badge-superadmin" style="font-size: 0.65rem; padding: 0.2rem 0.5rem; margin-left: 0.5rem;">SA</span>
+                                </td>
+                                <td data-label="API Keys">5</td>
+                                <td data-label="KV Pairs">2,456</td>
+                                <td data-label="First Created" class="text-muted">Oct 15, 2024</td>
+                                <td data-label="Last Activity" class="text-muted">Dec 11 15:42</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">Logout All</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Email">john.dev@gmail.com</td>
+                                <td data-label="API Keys">3</td>
+                                <td data-label="KV Pairs">1,847</td>
+                                <td data-label="First Created" class="text-muted">Nov 2, 2024</td>
+                                <td data-label="Last Activity" class="text-muted">Dec 11 14:30</td>
+                                <td data-label="Actions" class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <button class="btn btn-secondary btn-sm">Logout All</button>
+                                        <button class="btn btn-danger btn-sm">Delete User</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Email">sarah.tech@company.io</td>
+                                <td data-label="API Keys">8</td>
+                                <td data-label="KV Pairs">4,231</td>
+                                <td data-label="First Created" class="text-muted">Oct 28, 2024</td>
+                                <td data-label="Last Activity" class="text-muted">Dec 11 13:15</td>
+                                <td data-label="Actions" class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <button class="btn btn-secondary btn-sm">Logout All</button>
+                                        <button class="btn btn-danger btn-sm">Delete User</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Email">mike.startup@proton.me</td>
+                                <td data-label="API Keys">2</td>
+                                <td data-label="KV Pairs">523</td>
+                                <td data-label="First Created" class="text-muted">Dec 1, 2024</td>
+                                <td data-label="Last Activity" class="text-muted">Dec 10 18:45</td>
+                                <td data-label="Actions" class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <button class="btn btn-secondary btn-sm">Logout All</button>
+                                        <button class="btn btn-danger btn-sm">Delete User</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Keys & Usage Section -->
+        <div id="apikeys" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🔑 API Keys & Usage Monitor</h3>
+                    <span class="text-muted text-sm">Thursday, Dec 11, 2024 • Rate Limit: 100 req/60s</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>API Key</th>
+                                <th>Owner</th>
+                                <th>Today</th>
+                                <th>This Week</th>
+                                <th>This Month</th>
+                                <th>Total</th>
+                                <th>KV Pairs</th>
+                                <th>Last Used</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="ID" class="text-muted">#1</td>
+                                <td data-label="API Key"><code class="api-key-display">sk_live_a1b2c3d4e5f6...</code></td>
+                                <td data-label="Owner">admin@slimstore.app</td>
+                                <td data-label="Today"><span class="badge badge-success">1,247</span></td>
+                                <td data-label="Week"><strong>8,456</strong></td>
+                                <td data-label="Month">34,892</td>
+                                <td data-label="Total"><strong>156,432</strong></td>
+                                <td data-label="KV Pairs" class="text-muted">2,456</td>
+                                <td data-label="Last Used" class="text-muted">2s ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="ID" class="text-muted">#2</td>
+                                <td data-label="API Key"><code class="api-key-display">sk_live_x9y8z7w6v5u4...</code></td>
+                                <td data-label="Owner">sarah.tech@company.io</td>
+                                <td data-label="Today"><span class="badge badge-success">892</span></td>
+                                <td data-label="Week"><strong>6,234</strong></td>
+                                <td data-label="Month">28,456</td>
+                                <td data-label="Total"><strong>124,567</strong></td>
+                                <td data-label="KV Pairs" class="text-muted">4,231</td>
+                                <td data-label="Last Used" class="text-muted">15s ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="ID" class="text-muted">#3</td>
+                                <td data-label="API Key"><code class="api-key-display">sk_test_m1n2o3p4q5r6...</code></td>
+                                <td data-label="Owner">john.dev@gmail.com</td>
+                                <td data-label="Today"><span class="badge badge-success">456</span></td>
+                                <td data-label="Week"><strong>3,127</strong></td>
+                                <td data-label="Month">15,789</td>
+                                <td data-label="Total"><strong>87,654</strong></td>
+                                <td data-label="KV Pairs" class="text-muted">1,847</td>
+                                <td data-label="Last Used" class="text-muted">1m ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="ID" class="text-muted">#4</td>
+                                <td data-label="API Key"><code class="api-key-display">sk_test_f1e2d3c4b5a6...</code></td>
+                                <td data-label="Owner">mike.startup@proton.me</td>
+                                <td data-label="Today"><span class="text-muted">0</span></td>
+                                <td data-label="Week"><strong>234</strong></td>
+                                <td data-label="Month">1,456</td>
+                                <td data-label="Total"><strong>12,345</strong></td>
+                                <td data-label="KV Pairs" class="text-muted">523</td>
+                                <td data-label="Last Used" class="text-muted">18h ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="../public/js/d3.v7.min.js"></script>
+    <script>
+        // Mock data
+        const storageStats = [
+            {email: 'sarah.tech@company.io', api_key: 'sk_live_x9y8z7w6v5u4', total_bytes: 892456789, payload_bytes: 756234567, event_count: 2345678},
+            {email: 'admin@slimstore.app', api_key: 'sk_live_a1b2c3d4e5f6', total_bytes: 678234567, payload_bytes: 589123456, event_count: 1876543},
+            {email: 'john.dev@gmail.com', api_key: 'sk_test_m1n2o3p4q5r6', total_bytes: 456123456, payload_bytes: 398765432, event_count: 1234567},
+            {email: 'mike.startup@proton.me', api_key: 'sk_test_f1e2d3c4b5a6', total_bytes: 234567890, payload_bytes: 198765432, event_count: 654321},
+            {email: 'dev@acme.com', api_key: 'sk_live_z1x2c3v4b5n6', total_bytes: 187654321, payload_bytes: 156789012, event_count: 543210},
+            {email: 'api@startup.io', api_key: 'sk_test_q1w2e3r4t5y6', total_bytes: 145678901, payload_bytes: 123456789, event_count: 432109}
+        ];
+
+        const usageStats = [
+            {email: 'sarah.tech@company.io', api_key: 'sk_live_x9y8z7w6v5u4', total_requests: 156432, today_requests: 1247, week_requests: 8456, month_requests: 34892},
+            {email: 'admin@slimstore.app', api_key: 'sk_live_a1b2c3d4e5f6', total_requests: 124567, today_requests: 892, week_requests: 6234, month_requests: 28456},
+            {email: 'john.dev@gmail.com', api_key: 'sk_test_m1n2o3p4q5r6', total_requests: 87654, today_requests: 456, week_requests: 3127, month_requests: 15789},
+            {email: 'mike.startup@proton.me', api_key: 'sk_test_f1e2d3c4b5a6', total_requests: 45678, today_requests: 123, week_requests: 987, month_requests: 4567},
+            {email: 'dev@acme.com', api_key: 'sk_live_z1x2c3v4b5n6', total_requests: 34567, today_requests: 89, week_requests: 654, month_requests: 3456}
+        ];
+
+        const usageTimeline = [
+            {date: '2024-11-12', total_requests: 45234, success_requests: 44123, error_requests: 1111},
+            {date: '2024-11-15', total_requests: 52345, success_requests: 51234, error_requests: 1111},
+            {date: '2024-11-18', total_requests: 48765, success_requests: 47654, error_requests: 1111},
+            {date: '2024-11-21', total_requests: 56789, success_requests: 55678, error_requests: 1111},
+            {date: '2024-11-24', total_requests: 43456, success_requests: 42345, error_requests: 1111},
+            {date: '2024-11-27', total_requests: 61234, success_requests: 60123, error_requests: 1111},
+            {date: '2024-11-30', total_requests: 38976, success_requests: 37865, error_requests: 1111},
+            {date: '2024-12-03', total_requests: 54321, success_requests: 53210, error_requests: 1111},
+            {date: '2024-12-06', total_requests: 67890, success_requests: 66779, error_requests: 1111},
+            {date: '2024-12-09', total_requests: 58765, success_requests: 57654, error_requests: 1111},
+            {date: '2024-12-11', total_requests: 45678, success_requests: 44567, error_requests: 1111}
+        ];
+
+        const topEndpoints = [
+            {endpoint: '/api/event', count: 2345678},
+            {endpoint: '/api/kv', count: 1876543},
+            {endpoint: '/api/kv/{key}', count: 1234567},
+            {endpoint: '/api/schema', count: 654321},
+            {endpoint: '/api/event/query', count: 432109}
+        ];
+
+        const successRateStats = {success_count: 8234567, client_error_count: 156789, server_error_count: 12345, total_count: 8403701};
+
+        // Helper
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (sectionId === 'insights') {
+                setTimeout(renderCharts, 10);
+            }
+        }
+
+        function renderCharts() {
+            // Clear existing
+            document.getElementById('top-endpoints-chart').innerHTML = '';
+            document.getElementById('success-rate-chart').innerHTML = '';
+            document.getElementById('api-usage-timeline-chart').innerHTML = '';
+            document.getElementById('global-dist-chart').innerHTML = '';
+            document.getElementById('top-requests-chart').innerHTML = '';
+            document.getElementById('global-storage-chart').innerHTML = '';
+            document.getElementById('global-api-usage-chart').innerHTML = '';
+
+            // Tooltip
+            d3.select(".d3-tooltip").remove();
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "d3-tooltip")
+                .style("opacity", 0)
+                .style("position", "absolute")
+                .style("background", "rgba(17, 24, 39, 0.95)")
+                .style("color", "#f3f4f6")
+                .style("padding", "10px 14px")
+                .style("border-radius", "8px")
+                .style("font-size", "13px")
+                .style("pointer-events", "none")
+                .style("box-shadow", "0 10px 15px -3px rgba(0, 0, 0, 0.1)")
+                .style("z-index", "100")
+                .style("border", "1px solid rgba(255, 255, 255, 0.1)");
+
+            // 1. Top Endpoints (Horizontal Bar)
+            const endContainer = document.getElementById('top-endpoints-chart');
+            const endMargin = {top: 20, right: 20, bottom: 30, left: 120};
+            const endWidth = endContainer.clientWidth - endMargin.left - endMargin.right;
+            const endHeight = 300 - endMargin.top - endMargin.bottom;
+
+            const endSvg = d3.select("#top-endpoints-chart")
+                .append("svg")
+                .attr("width", endWidth + endMargin.left + endMargin.right)
+                .attr("height", endHeight + endMargin.top + endMargin.bottom)
+                .append("g")
+                .attr("transform", `translate(${endMargin.left},${endMargin.top})`);
+
+            const xEnd = d3.scaleLinear()
+                .domain([0, d3.max(topEndpoints, d => d.count)])
+                .range([0, endWidth]);
+
+            const yEnd = d3.scaleBand()
+                .range([0, endHeight])
+                .domain(topEndpoints.map(d => d.endpoint))
+                .padding(0.2);
+
+            endSvg.append("g")
+                .call(d3.axisLeft(yEnd))
+                .attr("color", "#9ca3af")
+                .style("font-size", "11px");
+
+            endSvg.selectAll("rect")
+                .data(topEndpoints)
+                .join("rect")
+                .attr("x", 0)
+                .attr("y", d => yEnd(d.endpoint))
+                .attr("width", d => xEnd(d.count))
+                .attr("height", yEnd.bandwidth())
+                .attr("fill", "#f59e0b")
+                .attr("rx", 3);
+
+            // 2. Success Rate (Donut)
+            const rateContainer = document.getElementById('success-rate-chart');
+            const rateWidth = rateContainer.clientWidth;
+            const rateHeight = 300;
+            const rateRadius = Math.min(rateWidth, rateHeight) / 2 - 30;
+
+            const rateSvg = d3.select("#success-rate-chart")
+                .append("svg")
+                .attr("width", rateWidth)
+                .attr("height", rateHeight)
+                .append("g")
+                .attr("transform", `translate(${rateWidth/2},${rateHeight/2})`);
+
+            const rateData = {
+                'Success': successRateStats.success_count,
+                'Client Error': successRateStats.client_error_count,
+                'Server Error': successRateStats.server_error_count
+            };
+            
+            const rateColor = d3.scaleOrdinal()
+                .domain(Object.keys(rateData))
+                .range(["#10b981", "#f59e0b", "#ef4444"]);
+
+            const ratePie = d3.pie().value(d => d[1]).sort(null);
+            const rateDataReady = ratePie(Object.entries(rateData).filter(d => d[1] > 0));
+            const rateArc = d3.arc().innerRadius(rateRadius * 0.6).outerRadius(rateRadius);
+
+            rateSvg.selectAll('path')
+                .data(rateDataReady)
+                .join('path')
+                .attr('d', rateArc)
+                .attr('fill', d => rateColor(d.data[0]))
+                .attr("stroke", "#111827")
+                .style("stroke-width", "2px");
+
+            const successRate = ((successRateStats.success_count / successRateStats.total_count) * 100).toFixed(1);
+            rateSvg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "-0.5em")
+                .style("font-size", "14px")
+                .style("fill", "#9ca3af")
+                .text("Success Rate");
+            rateSvg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "1.0em")
+                .style("font-size", "20px")
+                .style("font-weight", "bold")
+                .style("fill", "#10b981")
+                .text(successRate + "%");
+
+            // 3. API Usage Timeline
+            const timeContainer = document.getElementById('api-usage-timeline-chart');
+            const timeMargin = {top: 20, right: 20, bottom: 40, left: 60};
+            const timeWidth = timeContainer.clientWidth - timeMargin.left - timeMargin.right;
+            const timeHeight = 350 - timeMargin.top - timeMargin.bottom;
+
+            const timeSvg = d3.select("#api-usage-timeline-chart")
+                .append("svg")
+                .attr("width", timeWidth + timeMargin.left + timeMargin.right)
+                .attr("height", timeHeight + timeMargin.top + timeMargin.bottom)
+                .append("g")
+                .attr("transform", `translate(${timeMargin.left},${timeMargin.top})`);
+
+            const parseDate = d3.timeParse("%Y-%m-%d");
+            const formatDate = d3.timeFormat("%b %d");
+            usageTimeline.forEach(d => d.dateObj = parseDate(d.date));
+
+            const xTime = d3.scaleTime()
+                .domain(d3.extent(usageTimeline, d => d.dateObj))
+                .range([0, timeWidth]);
+
+            const yTime = d3.scaleLinear()
+                .domain([0, d3.max(usageTimeline, d => +d.total_requests) * 1.1])
+                .range([timeHeight, 0]);
+
+            timeSvg.append("g")
+                .attr("transform", `translate(0,${timeHeight})`)
+                .call(d3.axisBottom(xTime).ticks(6).tickFormat(formatDate))
+                .attr("color", "#6b7280");
+
+            timeSvg.append("g")
+                .call(d3.axisLeft(yTime).ticks(5).tickFormat(d => (d/1000) + 'K'))
+                .attr("color", "#6b7280");
+
+            const gradient = timeSvg.append("defs")
+                .append("linearGradient")
+                .attr("id", "timelineGradient")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "0%").attr("y2", "100%");
+            gradient.append("stop").attr("offset", "0%").attr("stop-color", "#3b82f6").attr("stop-opacity", 0.5);
+            gradient.append("stop").attr("offset", "100%").attr("stop-color", "#3b82f6").attr("stop-opacity", 0);
+
+            timeSvg.append("path")
+                .datum(usageTimeline)
+                .attr("fill", "url(#timelineGradient)")
+                .attr("stroke", "#3b82f6")
+                .attr("stroke-width", 2)
+                .attr("d", d3.area()
+                    .x(d => xTime(d.dateObj))
+                    .y0(timeHeight)
+                    .y1(d => yTime(d.total_requests))
+                    .curve(d3.curveMonotoneX)
+                );
+
+            // 4. Global Distribution (Donut)
+            const distContainer = document.getElementById('global-dist-chart');
+            const distWidth = distContainer.clientWidth;
+            const distHeight = 300;
+            const distRadius = Math.min(distWidth, distHeight) / 2 - 30;
+
+            const distSvg = d3.select("#global-dist-chart")
+                .append("svg")
+                .attr("width", distWidth)
+                .attr("height", distHeight)
+                .append("g")
+                .attr("transform", `translate(${distWidth/2},${distHeight/2})`);
+
+            const totalKv = 234567890;
+            const totalEvents = 2456789012;
+            const total = totalKv + totalEvents;
+
+            const distData = { 'KV Store': totalKv, 'Events': totalEvents };
+            const distColor = d3.scaleOrdinal().domain(Object.keys(distData)).range(["#ec4899", "#3b82f6"]);
+
+            const distPie = d3.pie().value(d => d[1]).sort(null);
+            const distDataReady = distPie(Object.entries(distData));
+            const distArc = d3.arc().innerRadius(distRadius * 0.6).outerRadius(distRadius);
+
+            distSvg.selectAll('path')
+                .data(distDataReady)
+                .join('path')
+                .attr('d', distArc)
+                .attr('fill', d => distColor(d.data[0]))
+                .attr("stroke", "#111827")
+                .style("stroke-width", "2px");
+
+            distSvg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "-0.5em")
+                .style("font-size", "14px")
+                .style("fill", "#9ca3af")
+                .text("Total Data");
+            distSvg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "1.0em")
+                .style("font-size", "18px")
+                .style("font-weight", "bold")
+                .style("fill", "#f3f4f6")
+                .text(formatBytes(total));
+
+            // 5. Top Requests (Bar)
+            const reqContainer = document.getElementById('top-requests-chart');
+            const reqMargin = {top: 20, right: 20, bottom: 30, left: 40};
+            const reqWidth = reqContainer.clientWidth - reqMargin.left - reqMargin.right;
+            const reqHeight = 300 - reqMargin.top - reqMargin.bottom;
+
+            const reqSvg = d3.select("#top-requests-chart")
+                .append("svg")
+                .attr("width", reqWidth + reqMargin.left + reqMargin.right)
+                .attr("height", reqHeight + reqMargin.top + reqMargin.bottom)
+                .append("g")
+                .attr("transform", `translate(${reqMargin.left},${reqMargin.top})`);
+
+            const topReq = usageStats.slice(0, 5);
+            
+            const xReq = d3.scaleBand()
+                .range([0, reqWidth])
+                .domain(topReq.map(d => d.email.split('@')[0]))
+                .padding(0.2);
+                
+            const yReq = d3.scaleLinear()
+                .domain([0, d3.max(topReq, d => d.total_requests)])
+                .range([reqHeight, 0]);
+
+            reqSvg.append("g")
+                .attr("transform", `translate(0,${reqHeight})`)
+                .call(d3.axisBottom(xReq))
+                .attr("color", "#6b7280")
+                .selectAll("text")
+                .style("font-size", "10px");
+
+            reqSvg.selectAll("rect")
+                .data(topReq)
+                .join("rect")
+                .attr("x", d => xReq(d.email.split('@')[0]))
+                .attr("y", d => yReq(d.total_requests))
+                .attr("width", xReq.bandwidth())
+                .attr("height", d => reqHeight - yReq(d.total_requests))
+                .attr("fill", "#10b981")
+                .attr("rx", 4);
+
+            // 6. Global Storage Chart
+            const storeContainer = document.getElementById('global-storage-chart');
+            const storeMargin = {top: 20, right: 100, bottom: 30, left: 180};
+            const storeWidth = storeContainer.clientWidth - storeMargin.left - storeMargin.right;
+            const storeHeight = 400 - storeMargin.top - storeMargin.bottom;
+
+            const storeSvg = d3.select("#global-storage-chart")
+                .append("svg")
+                .attr("width", storeWidth + storeMargin.left + storeMargin.right)
+                .attr("height", storeHeight + storeMargin.top + storeMargin.bottom)
+                .append("g")
+                .attr("transform", `translate(${storeMargin.left},${storeMargin.top})`);
+
+            const xStore = d3.scaleLinear()
+                .domain([0, d3.max(storageStats, d => d.total_bytes)])
+                .range([0, storeWidth]);
+
+            const yStore = d3.scaleBand()
+                .range([0, storeHeight])
+                .domain(storageStats.map(d => d.email))
+                .padding(0.3);
+
+            storeSvg.append("g")
+                .call(d3.axisLeft(yStore))
+                .attr("color", "#9ca3af")
+                .style("font-size", "11px");
+
+            storeSvg.selectAll("rect")
+                .data(storageStats)
+                .join("rect")
+                .attr("x", 0)
+                .attr("y", d => yStore(d.email))
+                .attr("width", d => xStore(d.total_bytes))
+                .attr("height", yStore.bandwidth())
+                .attr("fill", "#8b5cf6")
+                .attr("rx", 4);
+
+            storeSvg.selectAll("text.value")
+                .data(storageStats)
+                .join("text")
+                .attr("class", "value")
+                .attr("x", d => xStore(d.total_bytes) + 5)
+                .attr("y", d => yStore(d.email) + yStore.bandwidth() / 2 + 4)
+                .text(d => formatBytes(d.total_bytes))
+                .style("fill", "#d1d5db")
+                .style("font-size", "11px");
+
+            // 7. Global API Usage Chart
+            const apiContainer = document.getElementById('global-api-usage-chart');
+            const apiMargin = {top: 20, right: 100, bottom: 30, left: 180};
+            const apiWidth = apiContainer.clientWidth - apiMargin.left - apiMargin.right;
+            const apiHeight = 400 - apiMargin.top - apiMargin.bottom;
+
+            const apiSvg = d3.select("#global-api-usage-chart")
+                .append("svg")
+                .attr("width", apiWidth + apiMargin.left + apiMargin.right)
+                .attr("height", apiHeight + apiMargin.top + apiMargin.bottom)
+                .append("g")
+                .attr("transform", `translate(${apiMargin.left},${apiMargin.top})`);
+
+            const xApi = d3.scaleLinear()
+                .domain([0, d3.max(usageStats, d => d.total_requests)])
+                .range([0, apiWidth]);
+
+            const yApi = d3.scaleBand()
+                .range([0, apiHeight])
+                .domain(usageStats.map(d => d.email))
+                .padding(0.3);
+
+            apiSvg.append("g")
+                .call(d3.axisLeft(yApi))
+                .attr("color", "#9ca3af")
+                .style("font-size", "11px");
+
+            apiSvg.selectAll("rect")
+                .data(usageStats)
+                .join("rect")
+                .attr("x", 0)
+                .attr("y", d => yApi(d.email))
+                .attr("width", d => xApi(d.total_requests))
+                .attr("height", yApi.bandwidth())
+                .attr("fill", "#10b981")
+                .attr("rx", 4);
+
+            apiSvg.selectAll("text.value")
+                .data(usageStats)
+                .join("text")
+                .attr("class", "value")
+                .attr("x", d => xApi(d.total_requests) + 5)
+                .attr("y", d => yApi(d.email) + yApi.bandwidth() / 2 + 4)
+                .text(d => d.total_requests.toLocaleString())
+                .style("fill", "#d1d5db")
+                .style("font-size", "11px");
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCharts();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+name: Deploy Preview to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'preview/**'
+      - 'public/css/**'
+      - 'public/js/**'
+      - 'public/fonts/**'
+      - 'public/favicon.ico'
+      - '.github/workflows/preview.yml'
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Build preview site
+        run: |
+          echo "🔨 Building preview site..."
+          
+          # Create output directory
+          mkdir -p _site
+          
+          # Copy preview HTML files
+          cp preview/*.html _site/
+          
+          # Copy static assets maintaining structure
+          mkdir -p _site/public/css
+          mkdir -p _site/public/js
+          mkdir -p _site/public/fonts
+          
+          cp public/css/style.css _site/public/css/
+          cp public/js/d3.v7.min.js _site/public/js/
+          cp public/fonts/*.css _site/public/fonts/
+          cp public/fonts/*.woff2 _site/public/fonts/
+          cp public/favicon.ico _site/public/
+          
+          # Create a root favicon link
+          cp public/favicon.ico _site/
+          
+          # Fix paths in HTML files for GitHub Pages
+          # Change relative paths from ../public/ to ./public/
+          for file in _site/*.html; do
+            sed -i 's|../public/|./public/|g' "$file"
+          done
+          
+          echo "✅ Preview site built successfully"
+          echo ""
+          echo "📁 Site contents:"
+          find _site -type f | head -30
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

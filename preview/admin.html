@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Dashboard | API Keys, Usage & Data</title>
+    <link rel="shortcut icon" href="../public/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="../public/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="../public/css/style.css">
+    <style>
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .demo-badge {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+            z-index: 100;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.9; }
+        }
+
+        .demo-nav {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 100;
+        }
+
+        /* Chart container styles */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .chart-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        /* Key badge styles */
+        .key-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .key-badge:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .key-badge.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .json-preview {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            max-width: 400px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .timestamp-col {
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .source-badge {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        /* Playground styles */
+        .playground-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .playground-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .playground-request,
+        .playground-response {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .playground-endpoint-wrapper {
+            display: flex;
+            align-items: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .playground-method {
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .method-get {
+            background: #065f46;
+            color: #6ee7b7;
+        }
+
+        .playground-response-body {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            min-height: 250px;
+            max-height: 400px;
+            overflow: auto;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        /* JSON Syntax Highlighting */
+        .json-key { color: #93c5fd; }
+        .json-string { color: #86efac; }
+        .json-number { color: #fbbf24; }
+        .json-boolean { color: #f472b6; }
+        .json-null { color: #94a3b8; }
+
+        /* Method badges */
+        .method-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .method-badge.method-get {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .method-badge.method-post {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .method-badge.method-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-badge {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+        }
+
+        .status-badge.status-2xx {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .status-badge.status-4xx {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .playground-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">🎭 Demo Mode</div>
+    <div class="demo-nav">
+        <a href="index.html" class="btn btn-ghost btn-sm">← Landing</a>
+        <a href="superadmin.html" class="btn btn-secondary btn-sm">Superadmin →</a>
+    </div>
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="admin.html" class="logo">
+                <span class="logo-icon">🚀</span>
+                <span class="hidden-mobile">Dashboard</span>
+            </a>
+            <div class="flex items-center gap-2">
+                <div class="user-info-wrapper hidden-mobile">
+                    <span class="text-muted text-sm">demo@slimstore.app</span>
+                </div>
+                <div class="user-avatar-fallback">DE</div>
+                <a href="superadmin.html" class="btn btn-primary btn-sm badge-superadmin" title="Superadmin">
+                    🛡️ Superadmin
+                </a>
+                <a href="index.html" class="btn btn-ghost btn-sm" title="Logout">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container animate-fade-in" style="padding-top: 2rem; padding-bottom: 5rem;">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total API Keys</div>
+                <div class="stat-value">3 <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">/ 100</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Stored Keys</div>
+                <div class="stat-value">247</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Requests</div>
+                <div class="stat-value">12,847</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Data Points</div>
+                <div class="stat-value">89,432</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Payload Data</div>
+                <div class="stat-value">2.34 MB</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Storage</div>
+                <div class="stat-value">8.76 MB</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-container" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <div class="tabs" style="margin-bottom: 0;">
+                <button class="tab-btn active" onclick="showSection('insights')">📊 <span class="hidden-mobile">Insights</span></button>
+                <button class="tab-btn" onclick="showSection('apikeys')">🔑 <span class="hidden-mobile">API </span>Keys</button>
+                <button class="tab-btn" onclick="showSection('viewdata')">💾 Data</button>
+                <button class="tab-btn" onclick="showSection('events')">📡 Events</button>
+                <button class="tab-btn" onclick="showSection('logs')">📋 Logs</button>
+                <button class="tab-btn" onclick="showSection('playground')">🧪 <span class="hidden-mobile">Play</span></button>
+            </div>
+            
+            <div class="global-filter" style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="globalApiKeyFilter" class="text-sm font-medium text-muted hidden-mobile" style="white-space: nowrap;">Filter by key:</label>
+                <select id="globalApiKeyFilter" class="form-control" style="width: auto; flex: 1; max-width: 220px; min-width: 140px; padding: 0.4rem 2rem 0.4rem 0.75rem; font-size: 0.8rem;">
+                    <option value="">All API Keys</option>
+                    <option value="1">Production API</option>
+                    <option value="2">Development</option>
+                    <option value="3">Testing Key</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Insights Section -->
+        <div id="insights" class="section active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Usage Statistics</h2>
+                </div>
+                <div class="card-body">
+                    <div class="charts-container">
+                        <div>
+                            <h3 class="chart-title">Requests (Last 30 Days)</h3>
+                            <div id="requests-chart" style="width: 100%; height: 250px;"></div>
+                        </div>
+                        <div>
+                            <h3 class="chart-title">Top Endpoints</h3>
+                            <div id="endpoints-chart" style="width: 100%; height: 250px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Keys Section -->
+        <div id="apikeys" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔑 Your API Keys</h2>
+                    <button class="btn btn-primary">
+                        <span>+ Generate New Key</span>
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>API Key</th>
+                                <th>KV Pairs</th>
+                                <th>Events</th>
+                                <th>Storage</th>
+                                <th>Created</th>
+                                <th>Last Used</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Name"><strong>Production API</strong></td>
+                                <td data-label="API Key"><code class="api-key-display">sk_live_a1b2c3d4e5f6...</code></td>
+                                <td data-label="KV Pairs">156</td>
+                                <td data-label="Events">45,231</td>
+                                <td data-label="Storage">4.2 MB</td>
+                                <td data-label="Created" class="text-muted">Dec 1, 2024</td>
+                                <td data-label="Last Used" class="text-muted">2m ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">Copy</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Name"><strong>Development</strong></td>
+                                <td data-label="API Key"><code class="api-key-display">sk_test_x9y8z7w6v5u4...</code></td>
+                                <td data-label="KV Pairs">67</td>
+                                <td data-label="Events">32,156</td>
+                                <td data-label="Storage">3.1 MB</td>
+                                <td data-label="Created" class="text-muted">Nov 15, 2024</td>
+                                <td data-label="Last Used" class="text-muted">1h ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">Copy</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Name"><strong>Testing Key</strong></td>
+                                <td data-label="API Key"><code class="api-key-display">sk_test_m1n2o3p4q5r6...</code></td>
+                                <td data-label="KV Pairs">24</td>
+                                <td data-label="Events">12,045</td>
+                                <td data-label="Storage">1.4 MB</td>
+                                <td data-label="Created" class="text-muted">Dec 5, 2024</td>
+                                <td data-label="Last Used" class="text-muted">3d ago</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">Copy</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Section -->
+        <div id="viewdata" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💾 Key-Value Data</h2>
+                    <div class="flex items-center gap-2">
+                        <input type="text" placeholder="Search keys..." class="form-control" style="width: 200px;">
+                        <button class="btn btn-secondary btn-sm">Export JSON</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Value Preview</th>
+                                <th>API Key</th>
+                                <th>Updated</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Key"><code>user:preferences</code></td>
+                                <td data-label="Value" class="json-preview">{"theme":"dark","notifications":true,"language":"en"}</td>
+                                <td data-label="API Key"><span class="key-badge">Production API</span></td>
+                                <td data-label="Updated" class="text-muted timestamp-col">Dec 10, 14:32</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">View</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Key"><code>config:app</code></td>
+                                <td data-label="Value" class="json-preview">{"version":"2.4.1","features":["analytics","export"]}</td>
+                                <td data-label="API Key"><span class="key-badge">Production API</span></td>
+                                <td data-label="Updated" class="text-muted timestamp-col">Dec 10, 12:15</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">View</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Key"><code>cache:products</code></td>
+                                <td data-label="Value" class="json-preview">[{"id":1,"name":"Widget Pro","price":29.99},{"id":2,...}]</td>
+                                <td data-label="API Key"><span class="key-badge">Development</span></td>
+                                <td data-label="Updated" class="text-muted timestamp-col">Dec 9, 23:45</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">View</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Key"><code>session:abc123</code></td>
+                                <td data-label="Value" class="json-preview">{"userId":42,"role":"admin","expiresAt":"2024-12-11T..."}</td>
+                                <td data-label="API Key"><span class="key-badge">Testing Key</span></td>
+                                <td data-label="Updated" class="text-muted timestamp-col">Dec 8, 09:20</td>
+                                <td data-label="Actions" class="text-right">
+                                    <button class="btn btn-secondary btn-sm">View</button>
+                                    <button class="btn btn-danger btn-sm">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Events Section -->
+        <div id="events" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📡 Event Explorer</h2>
+                    <div class="flex items-center gap-2">
+                        <input type="text" placeholder="Filter events..." class="form-control" style="width: 200px;">
+                    </div>
+                </div>
+                
+                <!-- Event Stats -->
+                <div class="stats-grid" style="margin-bottom: 1.5rem;">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Events</div>
+                        <div class="stat-value">89,432</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Today</div>
+                        <div class="stat-value">1,247</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Active Sources</div>
+                        <div class="stat-value">8</div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Source</th>
+                                <th>Event Data</th>
+                                <th>API Key</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Timestamp" class="timestamp-col">Dec 11, 15:42:31</td>
+                                <td data-label="Source"><span class="source-badge">user_action</span></td>
+                                <td data-label="Data" class="json-preview">{"action":"click","element":"buy_button","page":"/product/123"}</td>
+                                <td data-label="API Key"><span class="key-badge">Production API</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Timestamp" class="timestamp-col">Dec 11, 15:41:28</td>
+                                <td data-label="Source"><span class="source-badge">page_view</span></td>
+                                <td data-label="Data" class="json-preview">{"url":"/dashboard","referrer":"/login","duration":12500}</td>
+                                <td data-label="API Key"><span class="key-badge">Production API</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Timestamp" class="timestamp-col">Dec 11, 15:40:15</td>
+                                <td data-label="Source"><span class="source-badge">api_call</span></td>
+                                <td data-label="Data" class="json-preview">{"endpoint":"/users","method":"GET","status":200,"latency":45}</td>
+                                <td data-label="API Key"><span class="key-badge">Development</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Timestamp" class="timestamp-col">Dec 11, 15:39:02</td>
+                                <td data-label="Source"><span class="source-badge">error</span></td>
+                                <td data-label="Data" class="json-preview">{"type":"ValidationError","message":"Invalid email format"}</td>
+                                <td data-label="API Key"><span class="key-badge">Testing Key</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Section -->
+        <div id="logs" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 Request Logs</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>API Key</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Time" class="timestamp-col">15:42:31</td>
+                                <td data-label="Method"><span class="method-badge method-get">GET</span></td>
+                                <td data-label="Endpoint"><code>/api/kv/user:preferences</code></td>
+                                <td data-label="Status"><span class="status-badge status-2xx">200</span></td>
+                                <td data-label="Duration" class="text-muted">12ms</td>
+                                <td data-label="API Key"><span class="key-badge">Production</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Time" class="timestamp-col">15:41:28</td>
+                                <td data-label="Method"><span class="method-badge method-post">POST</span></td>
+                                <td data-label="Endpoint"><code>/api/event</code></td>
+                                <td data-label="Status"><span class="status-badge status-2xx">201</span></td>
+                                <td data-label="Duration" class="text-muted">8ms</td>
+                                <td data-label="API Key"><span class="key-badge">Production</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Time" class="timestamp-col">15:40:15</td>
+                                <td data-label="Method"><span class="method-badge method-get">GET</span></td>
+                                <td data-label="Endpoint"><code>/api/kv</code></td>
+                                <td data-label="Status"><span class="status-badge status-2xx">200</span></td>
+                                <td data-label="Duration" class="text-muted">23ms</td>
+                                <td data-label="API Key"><span class="key-badge">Development</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Time" class="timestamp-col">15:39:02</td>
+                                <td data-label="Method"><span class="method-badge method-delete">DELETE</span></td>
+                                <td data-label="Endpoint"><code>/api/kv/temp:cache</code></td>
+                                <td data-label="Status"><span class="status-badge status-4xx">404</span></td>
+                                <td data-label="Duration" class="text-muted">5ms</td>
+                                <td data-label="API Key"><span class="key-badge">Testing</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Playground Section -->
+        <div id="playground" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🧪 API Playground</h2>
+                </div>
+                <div class="playground-container">
+                    <div class="playground-request">
+                        <div class="form-group">
+                            <label class="form-label">API Key</label>
+                            <select class="form-control">
+                                <option>Production API (sk_live_a1b2c3d4...)</option>
+                                <option>Development (sk_test_x9y8z7w6...)</option>
+                                <option>Testing Key (sk_test_m1n2o3p4...)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Endpoint</label>
+                            <div class="playground-endpoint-wrapper">
+                                <span class="playground-method method-get">GET</span>
+                                <select class="form-control playground-endpoint-select">
+                                    <option>/api → Get all keys</option>
+                                    <option>/api/{key} → Get specific key</option>
+                                    <option>/api/event → Get events</option>
+                                    <option>/api/schema → Get schemas</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-primary">🚀 Send Request</button>
+                            <button class="btn btn-secondary">Clear</button>
+                        </div>
+                    </div>
+                    <div class="playground-response">
+                        <h3 class="chart-title">Response</h3>
+                        <div class="playground-response-body">
+<pre><span class="json-key">{</span>
+  <span class="json-key">"status"</span>: <span class="json-string">"success"</span>,
+  <span class="json-key">"data"</span>: <span class="json-key">{</span>
+    <span class="json-key">"user:preferences"</span>: <span class="json-key">{</span>
+      <span class="json-key">"theme"</span>: <span class="json-string">"dark"</span>,
+      <span class="json-key">"notifications"</span>: <span class="json-boolean">true</span>,
+      <span class="json-key">"language"</span>: <span class="json-string">"en"</span>
+    <span class="json-key">}</span>,
+    <span class="json-key">"config:app"</span>: <span class="json-key">{</span>
+      <span class="json-key">"version"</span>: <span class="json-string">"2.4.1"</span>,
+      <span class="json-key">"features"</span>: [<span class="json-string">"analytics"</span>, <span class="json-string">"export"</span>]
+    <span class="json-key">}</span>
+  <span class="json-key">}</span>,
+  <span class="json-key">"meta"</span>: <span class="json-key">{</span>
+    <span class="json-key">"total"</span>: <span class="json-number">2</span>,
+    <span class="json-key">"latency_ms"</span>: <span class="json-number">12</span>
+  <span class="json-key">}</span>
+<span class="json-key">}</span></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../public/js/d3.v7.min.js"></script>
+    <script>
+        // Mock data for charts
+        const dailyStats = [
+            {date: '2024-11-12', total_requests: 320, success_requests: 310, error_requests: 10},
+            {date: '2024-11-13', total_requests: 450, success_requests: 440, error_requests: 10},
+            {date: '2024-11-14', total_requests: 380, success_requests: 370, error_requests: 10},
+            {date: '2024-11-15', total_requests: 520, success_requests: 505, error_requests: 15},
+            {date: '2024-11-16', total_requests: 290, success_requests: 285, error_requests: 5},
+            {date: '2024-11-17', total_requests: 180, success_requests: 175, error_requests: 5},
+            {date: '2024-11-18', total_requests: 420, success_requests: 410, error_requests: 10},
+            {date: '2024-11-19', total_requests: 480, success_requests: 465, error_requests: 15},
+            {date: '2024-11-20', total_requests: 510, success_requests: 500, error_requests: 10},
+            {date: '2024-11-21', total_requests: 560, success_requests: 545, error_requests: 15},
+            {date: '2024-11-22', total_requests: 620, success_requests: 605, error_requests: 15},
+            {date: '2024-11-23', total_requests: 350, success_requests: 340, error_requests: 10},
+            {date: '2024-11-24', total_requests: 280, success_requests: 275, error_requests: 5},
+            {date: '2024-11-25', total_requests: 590, success_requests: 575, error_requests: 15},
+            {date: '2024-11-26', total_requests: 640, success_requests: 625, error_requests: 15},
+            {date: '2024-11-27', total_requests: 580, success_requests: 565, error_requests: 15},
+            {date: '2024-11-28', total_requests: 420, success_requests: 410, error_requests: 10},
+            {date: '2024-11-29', total_requests: 380, success_requests: 370, error_requests: 10},
+            {date: '2024-11-30', total_requests: 290, success_requests: 285, error_requests: 5},
+            {date: '2024-12-01', total_requests: 450, success_requests: 440, error_requests: 10},
+            {date: '2024-12-02', total_requests: 520, success_requests: 505, error_requests: 15},
+            {date: '2024-12-03', total_requests: 480, success_requests: 465, error_requests: 15},
+            {date: '2024-12-04', total_requests: 550, success_requests: 535, error_requests: 15},
+            {date: '2024-12-05', total_requests: 620, success_requests: 605, error_requests: 15},
+            {date: '2024-12-06', total_requests: 580, success_requests: 565, error_requests: 15},
+            {date: '2024-12-07', total_requests: 320, success_requests: 310, error_requests: 10},
+            {date: '2024-12-08', total_requests: 280, success_requests: 275, error_requests: 5},
+            {date: '2024-12-09', total_requests: 490, success_requests: 475, error_requests: 15},
+            {date: '2024-12-10', total_requests: 540, success_requests: 525, error_requests: 15},
+            {date: '2024-12-11', total_requests: 380, success_requests: 370, error_requests: 10}
+        ];
+
+        const endpointStats = [
+            {endpoint: '/api/kv', count: 4523},
+            {endpoint: '/api/event', count: 3891},
+            {endpoint: '/api/kv/{key}', count: 2456},
+            {endpoint: '/api/schema', count: 1234},
+            {endpoint: '/api/event/query', count: 743}
+        ];
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (sectionId === 'insights') {
+                setTimeout(renderCharts, 10);
+            }
+        }
+
+        function renderCharts() {
+            // Clear existing
+            document.getElementById('requests-chart').innerHTML = '';
+            document.getElementById('endpoints-chart').innerHTML = '';
+
+            // Requests Area Chart
+            const reqContainer = document.getElementById('requests-chart');
+            const margin = {top: 20, right: 20, bottom: 30, left: 40};
+            const width = reqContainer.clientWidth - margin.left - margin.right;
+            const height = 250 - margin.top - margin.bottom;
+
+            const svg = d3.select("#requests-chart")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const parseDate = d3.timeParse("%Y-%m-%d");
+            const formatDate = d3.timeFormat("%b %d");
+            dailyStats.forEach(d => d.dateObj = parseDate(d.date));
+
+            const x = d3.scaleTime()
+                .domain(d3.extent(dailyStats, d => d.dateObj))
+                .range([0, width]);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(dailyStats, d => d.total_requests) * 1.1])
+                .range([height, 0]);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x).ticks(6).tickFormat(formatDate))
+                .attr("color", "#6b7280");
+
+            svg.append("g")
+                .call(d3.axisLeft(y).ticks(5))
+                .attr("color", "#6b7280");
+
+            // Gradient
+            const gradient = svg.append("defs")
+                .append("linearGradient")
+                .attr("id", "areaGradient")
+                .attr("x1", "0%").attr("y1", "0%")
+                .attr("x2", "0%").attr("y2", "100%");
+            gradient.append("stop").attr("offset", "0%").attr("stop-color", "#3b82f6").attr("stop-opacity", 0.5);
+            gradient.append("stop").attr("offset", "100%").attr("stop-color", "#3b82f6").attr("stop-opacity", 0);
+
+            svg.append("path")
+                .datum(dailyStats)
+                .attr("fill", "url(#areaGradient)")
+                .attr("stroke", "#3b82f6")
+                .attr("stroke-width", 2)
+                .attr("d", d3.area()
+                    .x(d => x(d.dateObj))
+                    .y0(height)
+                    .y1(d => y(d.total_requests))
+                    .curve(d3.curveMonotoneX)
+                );
+
+            // Endpoints Bar Chart
+            const endContainer = document.getElementById('endpoints-chart');
+            const endMargin = {top: 20, right: 20, bottom: 30, left: 120};
+            const endWidth = endContainer.clientWidth - endMargin.left - endMargin.right;
+            const endHeight = 250 - endMargin.top - endMargin.bottom;
+
+            const endSvg = d3.select("#endpoints-chart")
+                .append("svg")
+                .attr("width", endWidth + endMargin.left + endMargin.right)
+                .attr("height", endHeight + endMargin.top + endMargin.bottom)
+                .append("g")
+                .attr("transform", `translate(${endMargin.left},${endMargin.top})`);
+
+            const xEnd = d3.scaleLinear()
+                .domain([0, d3.max(endpointStats, d => d.count)])
+                .range([0, endWidth]);
+
+            const yEnd = d3.scaleBand()
+                .range([0, endHeight])
+                .domain(endpointStats.map(d => d.endpoint))
+                .padding(0.3);
+
+            endSvg.append("g")
+                .call(d3.axisLeft(yEnd))
+                .attr("color", "#9ca3af")
+                .style("font-size", "11px");
+
+            endSvg.selectAll("rect")
+                .data(endpointStats)
+                .join("rect")
+                .attr("x", 0)
+                .attr("y", d => yEnd(d.endpoint))
+                .attr("width", d => xEnd(d.count))
+                .attr("height", yEnd.bandwidth())
+                .attr("fill", "#10b981")
+                .attr("rx", 4);
+
+            endSvg.selectAll("text.value")
+                .data(endpointStats)
+                .join("text")
+                .attr("class", "value")
+                .attr("x", d => xEnd(d.count) + 5)
+                .attr("y", d => yEnd(d.endpoint) + yEnd.bandwidth() / 2 + 4)
+                .text(d => d.count.toLocaleString())
+                .style("fill", "#d1d5db")
+                .style("font-size", "11px");
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCharts();
+        });
+    </script>
+</body>
+</html>

@@ -425,6 +425,35 @@ Contributions are welcome! Please:
 4. Test thoroughly
 5. Submit a pull request
 
+## 🎭 Live Demo
+
+Check out the static preview of SlimStorage's UI with mock data:
+
+**[👉 View Live Demo](https://kibotu.github.io/SlimStorage/)**
+
+The demo includes:
+- **Landing Page** - Google OAuth login interface
+- **Admin Dashboard** - API key management, data explorer, event tracking, API playground
+- **Superadmin Panel** - System-wide analytics, user management, usage insights
+
+> Note: This is a static preview with fake data. No actual functionality is available in the demo.
+
+### Running the Preview Locally
+
+To view the preview locally:
+
+```bash
+# Navigate to the preview directory
+cd preview
+
+# Serve with any static file server
+python -m http.server 8000
+# or
+npx serve .
+```
+
+Then open `http://localhost:8000` in your browser.
+
 ## License
 
 [Apache License 2.0](LICENSE)
