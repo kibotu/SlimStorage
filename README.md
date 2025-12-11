@@ -389,6 +389,24 @@ Static preview with mock data. Explore the landing page, admin dashboard, and su
 
 ---
 
+## Example Usage
+
+### Berlin Radiation Monitor
+
+A real-world application using SlimStorage's Event API to collect and display Geiger counter measurements from Berlin.
+
+[![Berlin Radiation Monitor](https://portfolio.kibotu.net/storage/cache/images/000/675/serviceskibotunet-geiger-rangeall,medium_large.1765371282.png)](https://storage.services.kibotu.net/geiger)
+
+**Features demonstrated:**
+- **Event API** — Pushing sensor readings (CPM, µSv/h) with millisecond precision
+- **Schema optimization** — Sub-millisecond queries on 8M+ events
+- **Time-series visualization** — Daily, weekly, monthly, and yearly aggregations
+- **Statistics** — Min/max ranges, averages, and daily exposure calculations
+
+[👉 View Live Statistics](https://storage.services.kibotu.net/geiger)
+
+---
+
 ## License
 
 [Apache License 2.0](LICENSE)
