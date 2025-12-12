@@ -9,6 +9,32 @@ A self-hosted key/value store and event API. One PHP file to install, one dashbo
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-8892BF.svg)](https://php.net/)
 [![MySQL Version](https://img.shields.io/badge/mysql-%3E%3D5.7-4479A1.svg)](https://www.mysql.com/)
 
+## Live Demo
+
+**[👉 View Live Demo](https://kibotu.github.io/SlimStorage/)**
+
+Static preview with mock data. Explore the landing page, admin dashboard, and superadmin panel without installing anything.
+
+---
+
+## Example Usage
+
+### [Berlin Radiation Monitor]
+
+A real-world application using SlimStorage's Event API to collect and display Geiger counter measurements from Berlin.
+
+[![Berlin Radiation Monitor](https://portfolio.kibotu.net/storage/cache/images/000/675/serviceskibotunet-geiger-rangeall,medium_large.1765371282.png)](https://storage.services.kibotu.net/geiger)
+
+**Features demonstrated:**
+- **Event API** — Pushing sensor readings (CPM, µSv/h) with millisecond precision
+- **Schema optimization** — Sub-millisecond queries on 8M+ events
+- **Time-series visualization** — Daily, weekly, monthly, and yearly aggregations
+- **Statistics** — Min/max ranges, averages, and daily exposure calculations
+
+[👉 View Live Statistics](https://storage.services.kibotu.net/geiger)
+
+[👉 View Radiation Monitor Blog Article](https://portfolio.kibotu.net/essays/2021/03/diy-geiger-counter/)
+
 ## Why SlimStorage?
 
 Sometimes you just need a simple API to store and retrieve data. No vendor lock-in, no monthly bills, no complicated setup. Just upload one file, follow the wizard, and you're done.
@@ -378,34 +404,6 @@ Use this when you want a clean slate — fresh install, testing, or starting ove
 - **Self-hosted assets** — No external CDN dependencies
 
 Keep `.secrets.yml` secure (never commit it). Delete `install.php` after installation.
-
----
-
-## Live Demo
-
-**[👉 View Live Demo](https://kibotu.github.io/SlimStorage/)**
-
-Static preview with mock data. Explore the landing page, admin dashboard, and superadmin panel without installing anything.
-
----
-
-## Example Usage
-
-### [Berlin Radiation Monitor]
-
-A real-world application using SlimStorage's Event API to collect and display Geiger counter measurements from Berlin.
-
-[![Berlin Radiation Monitor](https://portfolio.kibotu.net/storage/cache/images/000/675/serviceskibotunet-geiger-rangeall,medium_large.1765371282.png)](https://storage.services.kibotu.net/geiger)
-
-**Features demonstrated:**
-- **Event API** — Pushing sensor readings (CPM, µSv/h) with millisecond precision
-- **Schema optimization** — Sub-millisecond queries on 8M+ events
-- **Time-series visualization** — Daily, weekly, monthly, and yearly aggregations
-- **Statistics** — Min/max ranges, averages, and daily exposure calculations
-
-[👉 View Live Statistics](https://storage.services.kibotu.net/geiger)
-
-[👉 View Radiation Monitor Blog Article](https://portfolio.kibotu.net/essays/2021/03/diy-geiger-counter/)
 
 ---
 
